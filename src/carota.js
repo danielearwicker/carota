@@ -1,19 +1,11 @@
 var per = require('per');
+var doc = require('./doc');
+
+// needed for tests, which shouldn't be in here...
 var characters = require('./characters');
 var split = require('./split');
 var wrap = require('./wrap');
 var word = require('./word');
-var measure = require('./measure');
-
-var render = function(ctx, x, y, lines, maxHeight) {
-    measure.prepareContext(ctx);
-    lines.some(function(line) {
-        if (line.baseline - line.ascent > maxHeight) {
-            return true;
-        }
-        line.draw(ctx, x, y);
-    });
-};
 
 var sampleText = [
     { text: '    Crampton Wick,\n    26th Oct 2013\n\n' },
@@ -72,7 +64,7 @@ assert(
 var testToRuns = function(expected, start, count) {
     var startChar = per(characters).skip(start).first(sampleText);
     var finishChar = per(characters).skip(start + count).first(sampleText);
-    assert(expected, per().map('.text').toArray(startChar.cut(finishChar)));
+    assert(expected, per.map('.text').toArray(startChar.cut(finishChar)));
 };
 
 testToRuns(["on Wick,\n "], 10, 10);
@@ -82,7 +74,7 @@ testToRuns(["on Wick,\n    26th Oct 2013\n\n",
             "No. "], 10, 80);
 
 var getPlainText = function(from, to) {
-    return per().map('.text').toArray(from.cut(to)).join('');
+    return per.map('.text').toArray(from.cut(to)).join('');
 };
 
 per(characters).per(split()).read(sampleText, function(word) {
@@ -101,48 +93,36 @@ $(function() {
     var canvas = $('canvas');
     var ctx = canvas[0].getContext('2d');
 
-    var words = per(characters).per(split()).map(word).toArray(sampleText);
+    var carotaDocument = doc();
+    carotaDocument.width(canvas[0].width);
+    carotaDocument.load(sampleText);
 
-    var lines;
-    var customWidth;
-
-    var layout = function() {
-        var width = customWidth || canvas[0].width;
-        lines = per().forEach().per(wrap(width)).toArray(words);
-        paint();
-    };
-
-    var hoverLine, hoverWord;
+    var hoverChar;
 
     var paint = function() {
 
         ctx.clearRect(0, 0, canvas[0].width, canvas[0].height);
 
-        if (hoverLine) {
-            hoverLine.drawPath(ctx);
+        if (hoverChar) {
+            var word = hoverChar.word;
+            var line = word.line;
+            line.bounds().drawPath(ctx);
             ctx.fillStyle = 'rgb(200, 255, 230)';
             ctx.fill();
-        }
-        if (hoverWord) {
-            hoverWord.drawPath(ctx);
+            word.bounds().drawPath(ctx);
             ctx.fillStyle = 'rgb(200, 230, 255)';
+            ctx.fill();
+            hoverChar.bounds().drawPath(ctx);
+            ctx.fillStyle = 'rgb(255, 200, 200)';
             ctx.fill();
         }
 
-        render(ctx, 0, 0, lines, canvas[0].height);
+        carotaDocument.draw(ctx, 0, 0, canvas[0].height);
 
-        if (customWidth) {
-            ctx.beginPath();
-            ctx.moveTo(customWidth, 0);
-            ctx.lineTo(customWidth, canvas[0].height);
-            ctx.stroke();
-        }
-    };
-
-    var resize = function() {
-        canvas[0].width = $(window).width() - 24;
-        canvas[0].height = $(window).height() - 24;
-        layout();
+        ctx.beginPath();
+        ctx.moveTo(carotaDocument.width(), 0);
+        ctx.lineTo(carotaDocument.width(), canvas[0].height);
+        ctx.stroke();
     };
 
     canvas.mousemove(function(ev) {
@@ -150,47 +130,25 @@ $(function() {
         var mouseX = ev.pageX - co.left;
         var mouseY = ev.pageY - co.top;
 
-        var newHoverWord = null, newHoverLine = null;
-
         if (ev.ctrlKey) {
-            hoverLine = hoverWord = null;
-            customWidth = mouseX;
-            layout();
+            hoverChar = null;
+            carotaDocument.width(mouseX);
+            paint();
         } else {
-            if (customWidth) {
-                customWidth = 0;
-                layout();
-            }
-            lines.some(function(line) {
-                var lineBounds = line.bounds();
-                if (lineBounds.contains(mouseX, mouseY)) {
-                    newHoverLine = lineBounds;
-                    line.positionedWords.some(function(positionedWord) {
-                        var bounds = positionedWord.bounds();
-                        if (bounds.contains(mouseX, mouseY)) {
-                            bounds.word = positionedWord.word;
-                            newHoverWord = bounds;
-                            return true;
-                        }
-                    });
-                    return true;
-                }
-            });
-
-            if ((!newHoverWord && hoverWord) ||
-                (newHoverWord && (!hoverWord || newHoverWord.word !== hoverWord.word))) {
-                hoverWord = newHoverWord;
-                hoverLine = newHoverLine;
+            var newHoverChar = carotaDocument.characterByCoordinate(mouseX, mouseY);
+            if (!doc.areCharsEqual(hoverChar, newHoverChar)) {
+                hoverChar = newHoverChar;
+                $('#ordinal').val(hoverChar ? hoverChar.ordinal : '');
                 paint();
-            } else {
-                if (hoverLine != newHoverLine) {
-                    hoverLine = newHoverLine;
-                    paint();
-                }
             }
         }
     });
 
-    resize();
-    $('body').resize(resize);
+    $('#gotoOrdinal').click(function() {
+        var o = parseInt($('#ordinal').val(), 10);
+        hoverChar = carotaDocument.characterByOrdinal(o);
+        paint();
+    });
+
+    paint();
 });

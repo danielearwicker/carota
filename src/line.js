@@ -1,4 +1,4 @@
-var positionedWord = require('./positionedWord');
+var positionedWord = require('./positionedword');
 var rect = require('./rect');
 
 /*  A Line is returned by the wrap function. It contains an array of PositionedWord objects that are
@@ -26,23 +26,44 @@ var prototype = {
             this.baseline - this.ascent,
             this.width,
             this.ascent + this.descent);
+    },
+    characterByOrdinal: function(index) {
+        if (index >= this.ordinal && index < this.ordinal + this.length) {
+            var result = null;
+            if (this.positionedWords.some(function(word) {
+                result = word.characterByOrdinal(index);
+                if (result) {
+                    return true;
+                }
+            })) {
+                return result;
+            }
+        }
     }
 };
 
-module.exports = function(width, baseline, ascent, descent, words) {
-    var x = 0;
+module.exports = function(doc, width, baseline, ascent, descent, words, ordinal) {
+
     var line = Object.create(prototype, {
+        doc: { value: doc },
         width: { value: width },
         baseline: { value: baseline },
         ascent: { value: ascent },
-        descent: { value: descent }
+        descent: { value: descent },
+        ordinal: { value: ordinal }
     });
+
+    var x = 0;
     Object.defineProperty(line, 'positionedWords', {
         value: words.map(function(word) {
             var left = x;
             x += word.width;
-            return positionedWord(word, line, left);
+            var wordOrdinal = ordinal;
+            ordinal += (word.text.length + word.space.length);
+            return positionedWord(word, line, left, wordOrdinal);
         })
     });
+
+    Object.defineProperty(line, 'length', { value: ordinal - line.ordinal });
     return line;
 };

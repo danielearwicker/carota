@@ -43,12 +43,14 @@ var measure = function(runs) {
         parts: runs.map(part),
         ascent: 0,
         descent: 0,
-        width: 0
+        width: 0,
+        length: 0
     };
     section.parts.forEach(function(p) {
         section.ascent = Math.max(section.ascent, p.ascent);
         section.descent = Math.max(section.descent, p.descent);
         section.width += p.width;
+        section.length += p.run.text.length;
     });
     return section;
 };
@@ -57,8 +59,8 @@ module.exports = function(coords) {
     if (!coords) {
         return coords;
     }
-    var text = measure(per().toArray(coords.text.cut(coords.spaces)));
-    var space = measure(per().toArray(coords.spaces.cut(coords.end)));
+    var text = measure(per.toArray(coords.text.cut(coords.spaces)));
+    var space = measure(per.toArray(coords.spaces.cut(coords.end)));
     return Object.create(prototype, {
         text: { value: text },
         space: { value: space },

@@ -1,8 +1,8 @@
 
 var prototype = {
     contains: function(x, y) {
-        return x > this.l && x < (this.l + this.w) &&
-            y > this.t && y < (this.t + this.h);
+        return x >= this.l && x < (this.l + this.w) &&
+            y >= this.t && y < (this.t + this.h);
 
     },
     drawPath: function(ctx) {
@@ -15,6 +15,10 @@ var prototype = {
     },
     offset: function(x, y) {
         return rect(this.l + x, this.t + y, this.w, this.h);
+    },
+    equals: function(other) {
+        return this.l === other.l && this.t === other.t &&
+               this.w === other.w && this.h === other.h;
     }
 };
 

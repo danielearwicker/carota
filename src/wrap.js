@@ -9,9 +9,15 @@ var line = require('./line');
     Returns a stream of line objects, each containing an array of positionedWord objects.
  */
 
-module.exports = function(width) {
+module.exports = function(width, doc) {
 
-    var lineBuffer = [], lineWidth = 0, maxAscent = 0, maxDescent = 0, y = 0, quit;
+    var lineBuffer = [],
+        lineWidth = 0,
+        maxAscent = 0,
+        maxDescent = 0,
+        y = 0,
+        ordinal = 0,
+        quit;
 
     var store = function(word, eachLine) {
         lineBuffer.push(word);
@@ -27,7 +33,9 @@ module.exports = function(width) {
         if (quit) {
             return;
         }
-        quit = eachLine(line(width, y + maxAscent, maxAscent, maxDescent, lineBuffer));
+        var l = line(doc, width, y + maxAscent, maxAscent, maxDescent, lineBuffer, ordinal);
+        ordinal += l.length;
+        quit = eachLine(l);
         y += (maxAscent + maxDescent);
         lineBuffer.length = 0;
         lineWidth = maxAscent = maxDescent = 0;
