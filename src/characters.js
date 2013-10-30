@@ -48,11 +48,13 @@ function firstNonEmpty(runs, n) {
     return character(runs, runs.length, 0);
 }
 
-module.exports = function(runs, eachCharacter) {
-    var c = firstNonEmpty(runs, 0);
-    while (!eachCharacter(c) && (c.char !== null)) {
-        c = (c._offset + 1 < runs[c._run].text.length)
-            ? character(runs, c._run, c._offset + 1)
-            : firstNonEmpty(runs, c._run + 1);
-    }
+module.exports = function(runs) {
+    return function(emit) {
+        var c = firstNonEmpty(runs, 0);
+        while (!emit(c) && (c.char !== null)) {
+            c = (c._offset + 1 < runs[c._run].text.length)
+                ? character(runs, c._run, c._offset + 1)
+                : firstNonEmpty(runs, c._run + 1);
+        }
+    };
 };

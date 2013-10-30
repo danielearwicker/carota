@@ -40,7 +40,7 @@ var prototype = {
 
 var measure = function(runs) {
     var section = {
-        parts: runs.map(part),
+        parts: per(runs).map(part).all(),
         ascent: 0,
         descent: 0,
         width: 0,
@@ -59,8 +59,8 @@ module.exports = function(coords) {
     if (!coords) {
         return coords;
     }
-    var text = measure(per.toArray(coords.text.cut(coords.spaces)));
-    var space = measure(per.toArray(coords.spaces.cut(coords.end)));
+    var text = measure(coords.text.cut(coords.spaces));
+    var space = measure(coords.spaces.cut(coords.end));
     return Object.create(prototype, {
         text: { value: text },
         space: { value: space },

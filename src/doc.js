@@ -5,13 +5,17 @@ var wrap = require('./wrap');
 var word = require('./word');
 var measure = require('./measure');
 
+function last(ar) {
+    return ar[ar.length - 1];
+}
+
 var prototype = {
     load: function(runs) {
-        this.words = per(characters).per(split()).map(word).toArray(runs);
+        this.words = per(characters(runs)).per(split()).map(word).all();
         this.layout();
     },
     layout: function() {
-        this.lines = per.forEach().per(wrap(this._width, this)).toArray(this.words);
+        this.lines = per(this.words).per(wrap(this._width, this)).all();
     },
     width: function(width) {
         if (arguments.length === 0) {
@@ -45,26 +49,37 @@ var prototype = {
         this.lines.some(function(line) {
             var bounds = line.bounds();
             if (bounds.contains(x, y)) {
-                line.positionedWords.some(function(positionedWord) {
-                    bounds = positionedWord.bounds();
+                line.positionedWords.some(function(pword) {
+                    bounds = pword.bounds();
                     if (bounds.contains(x, y)) {
-                        positionedWord.characters(function(pchar) {
+                        var next = false;
+                        pword.positionedCharacters().some(function(pchar) {
+                            if (next) {
+                                found = pchar;
+                                return true;
+                            }
                             bounds = pchar.bounds();
                             if (bounds.contains(x, y)) {
-                                found = pchar
-                                return true;
+                                if ((x - bounds.l) > (bounds.w / 2)) {
+                                    next = true;
+                                } else {
+                                    found = pchar;
+                                    return true;
+                                }
                             }
                         });
                         return true;
                     }
                 });
                 if (!found) {
-                    var lastWord = line.positionedWords[line.positionedWords.length - 1];
-                    found = per.last(lastWord.characters, lastWord);
+                    found = last(last(line.positionedWords).positionedCharacters());
                 }
                 return true;
             }
         });
+        if (!found) {
+            found = last(last(last(this.lines).positionedWords).positionedCharacters());
+        }
         return found;
     }
 };
@@ -74,6 +89,7 @@ exports = module.exports = function() {
     doc._width = 0;
     doc.words = [];
     doc.lines = [];
+    doc.selection = { start: 0, end: 0 };
     return doc;
 };
 

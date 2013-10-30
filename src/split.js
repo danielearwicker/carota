@@ -17,7 +17,7 @@ module.exports = function() {
 
     var word = null, trailingSpaces = null, newLine = true;
 
-    return function(inputChar, eachWord) {
+    return function(emit, inputChar) {
 
         var endOfWord;
         if (inputChar.char === null) {
@@ -45,7 +45,7 @@ module.exports = function() {
         }
         if (endOfWord) {
             if (word && !word.equals(inputChar)) {
-                if (eachWord({
+                if (emit({
                     text: word,
                     spaces: trailingSpaces || inputChar,
                     end: inputChar
@@ -55,7 +55,7 @@ module.exports = function() {
                 trailingSpaces = null;
             }
             if (inputChar.char === null) {
-                eachWord(null); // Indicate end of stream
+                emit(null); // Indicate end of stream
             }
 
             word = inputChar;

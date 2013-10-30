@@ -4,7 +4,8 @@ var part = require('./part');
 var positionedChar = {
     bounds: function() {
         var wb = this.word.bounds();
-        return rect(wb.l + this.left, wb.t, this.part.width, wb.h);
+        var width = this.word.word.isNewLine() ? 20 : this.part.width;
+        return rect(wb.l + this.left, wb.t, width, wb.h);
     }
 };
 
@@ -36,8 +37,7 @@ var prototype = {
     },
     characterByOrdinal: function(index) {
         if (index >= this.ordinal && index < this.ordinal + this.length) {
-            this.realiseCharacters();
-            return this._characters[index - this.ordinal];
+            return this.positionedCharacters()[index - this.ordinal];
         }
     },
     realiseCharacters: function() {
@@ -63,9 +63,9 @@ var prototype = {
             this._characters = cache;
         }
     },
-    characters: function(eachCharacter) {
+    positionedCharacters: function() {
         this.realiseCharacters();
-        this._characters.some(eachCharacter);
+        return this._characters;
     }
 };
 

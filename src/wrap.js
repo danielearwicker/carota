@@ -19,41 +19,41 @@ module.exports = function(width, doc) {
         ordinal = 0,
         quit;
 
-    var store = function(word, eachLine) {
+    var store = function(word, emit) {
         lineBuffer.push(word);
         lineWidth += word.width;
         maxAscent = Math.max(maxAscent, word.ascent);
         maxDescent = Math.max(maxDescent, word.descent);
         if (word.isNewLine()) {
-            send(eachLine);
+            send(emit);
         }
     };
 
-    var send = function(eachLine) {
+    var send = function(emit) {
         if (quit) {
             return;
         }
         var l = line(doc, width, y + maxAscent, maxAscent, maxDescent, lineBuffer, ordinal);
         ordinal += l.length;
-        quit = eachLine(l);
+        quit = emit(l);
         y += (maxAscent + maxDescent);
         lineBuffer.length = 0;
         lineWidth = maxAscent = maxDescent = 0;
     };
 
-    return function(inputWord, eachLine) {
+    return function(emit, inputWord) {
         if (!inputWord) {
             if (lineBuffer.length) {
-                send(eachLine);
+                send(emit);
             }
         } else {
             if (!lineBuffer.length) {
-                store(inputWord, eachLine);
+                store(inputWord, emit);
             } else {
                 if (lineWidth + inputWord.text.width > width) {
-                    send(eachLine);
+                    send(emit);
                 }
-                store(inputWord, eachLine);
+                store(inputWord, emit);
             }
         }
         return quit;
