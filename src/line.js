@@ -16,16 +16,29 @@ var rect = require('./rect');
                   - Returns a Rect for the bounding box.
  */
 var prototype = {
-    draw: function(ctx, x, y) {
+    draw: function(ctx) {
         this.positionedWords.forEach(function(word) {
-            word.draw(ctx, x, y);
+            word.draw(ctx);
         });
     },
-    bounds: function() {
-        return rect(0,
-            this.baseline - this.ascent,
-            this.width,
-            this.ascent + this.descent);
+    firstWord: function() {
+        return this.positionedWords[0];
+    },
+    lastWord: function() {
+        return this.positionedWords[this.positionedWords.length - 1];
+    },
+    bounds: function(minimal) {
+        if (minimal) {
+            var firstWord = this.firstWord().bounds(),
+                lastWords = this.lastWord().bounds();
+            return rect(
+                firstWord.l,
+                this.baseline - this.ascent,
+                lastWords.l + lastWords.w,
+                this.ascent + this.descent);
+        }
+        return rect(0, this.baseline - this.ascent,
+            this.width, this.ascent + this.descent);
     },
     characterByOrdinal: function(index) {
         if (index >= this.ordinal && index < this.ordinal + this.length) {

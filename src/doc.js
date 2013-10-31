@@ -17,6 +17,11 @@ var prototype = {
     layout: function() {
         this.lines = per(this.words).per(wrap(this._width, this)).all();
     },
+    plainText: function() {
+        return this.words.map(function(word) {
+            return word.plainText;
+        }).join('');
+    },
     width: function(width) {
         if (arguments.length === 0) {
             return this._width;
@@ -24,14 +29,79 @@ var prototype = {
         this._width = width;
         this.layout();
     },
-    draw: function(ctx, x, y, bottom) {
+    firstLine: function() {
+        return this.lines[0];
+    },
+    lastLine: function() {
+        return this.lines[this.lines.length - 1];
+    },
+    draw: function(ctx, bottom) {
         measure.prepareContext(ctx);
         this.lines.some(function(line) {
             if (line.baseline - line.ascent > bottom) {
                 return true;
             }
-            line.draw(ctx, x, y);
+            line.draw(ctx);
         });
+    },
+    toggleCaret: function() {
+        var old = this.caretVisible;
+        if (this.selection.start === this.selection.end) {
+            if (this.selectionJustChanged) {
+                this.selectionJustChanged = false;
+            } else {
+                this.caretVisible = !this.caretVisible;
+            }
+        }
+        return this.caretVisible !== old;
+    },
+    drawSelection: function(ctx) {
+        var start = this.characterByOrdinal(this.selection.start),
+            startBounds = start.bounds(),
+            line = start.word.line.bounds(true);
+        if (this.selection.end === this.selection.start) {
+            if (this.caretVisible) {
+                ctx.beginPath();
+                ctx.moveTo(startBounds.l, line.t);
+                ctx.lineTo(startBounds.l, line.t + line.h);
+                ctx.stroke();
+            }
+        } else {
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 100, 200, 0.3)';
+
+            var end = this.characterByOrdinal(this.selection.end),
+                endBounds = end.bounds();
+
+            if (start.word.line.ordinal === end.word.line.ordinal) {
+                ctx.fillRect(startBounds.l, line.t, endBounds.l - startBounds.l, line.h);
+            } else {
+                ctx.fillRect(startBounds.l, line.t, line.w - startBounds.l, line.h);
+                line = end.word.line.bounds(true);
+                ctx.fillRect(line.l, line.t, endBounds.l - line.l, line.h);
+
+                this.lines.some(function(line) {
+                    if (line.ordinal <= start.ordinal) {
+                        return false;
+                    }
+                    if (line.ordinal + line.length > end.ordinal) {
+                        return true;
+                    }
+                    var b = line.bounds(true);
+                    ctx.fillRect(b.l, b.t, b.w, b.h);
+                    return false;
+                });
+            }
+
+            ctx.restore();
+        }
+    },
+    select: function(ordinal, ordinalEnd) {
+        this.selection.start = ordinal;
+        this.selection.end = typeof ordinalEnd === 'number'
+            ? ordinalEnd : ordinal;
+        this.selectionJustChanged = true;
+        this.caretVisible = true;
     },
     characterByOrdinal: function(index) {
         var result = null;
@@ -44,24 +114,28 @@ var prototype = {
             return result;
         }
     },
-    characterByCoordinate: function(x, y) {
-        var found;
+    characterByCoordinate: function(x, y, right) {
+        var found, nextLine = false;
         this.lines.some(function(line) {
+            if (nextLine) {
+                found = line.characterByOrdinal(line.ordinal);
+                return true;
+            }
             var bounds = line.bounds();
             if (bounds.contains(x, y)) {
                 line.positionedWords.some(function(pword) {
                     bounds = pword.bounds();
                     if (bounds.contains(x, y)) {
-                        var next = false;
+                        var nextChar = false;
                         pword.positionedCharacters().some(function(pchar) {
-                            if (next) {
+                            if (nextChar) {
                                 found = pchar;
                                 return true;
                             }
                             bounds = pchar.bounds();
                             if (bounds.contains(x, y)) {
                                 if ((x - bounds.l) > (bounds.w / 2)) {
-                                    next = true;
+                                    nextChar = true;
                                 } else {
                                     found = pchar;
                                     return true;
@@ -72,13 +146,18 @@ var prototype = {
                     }
                 });
                 if (!found) {
-                    found = last(last(line.positionedWords).positionedCharacters());
+                    if (right) {
+                        nextLine = true;
+                    } else {
+                        found = line.lastWord().lastCharacter();
+                    }
+                } else {
+                    return true;
                 }
-                return true;
             }
         });
         if (!found) {
-            found = last(last(last(this.lines).positionedWords).positionedCharacters());
+            found = this.lastLine().lastWord().lastCharacter();
         }
         return found;
     }
@@ -90,6 +169,7 @@ exports = module.exports = function() {
     doc.words = [];
     doc.lines = [];
     doc.selection = { start: 0, end: 0 };
+    doc.caretVisible = true;
     return doc;
 };
 

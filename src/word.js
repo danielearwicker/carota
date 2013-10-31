@@ -1,5 +1,6 @@
 var per = require('per');
 var part = require('./part');
+var measure = require('./measure');
 
 /*  A Word has the following properties:
 
@@ -38,34 +39,47 @@ var prototype = {
     }
 };
 
-var measure = function(runs) {
-    var section = {
+var section = function(runs) {
+    var s = {
         parts: per(runs).map(part).all(),
         ascent: 0,
         descent: 0,
         width: 0,
-        length: 0
+        length: 0,
+        plainText: ''
     };
-    section.parts.forEach(function(p) {
-        section.ascent = Math.max(section.ascent, p.ascent);
-        section.descent = Math.max(section.descent, p.descent);
-        section.width += p.width;
-        section.length += p.run.text.length;
+    s.parts.forEach(function(p) {
+        s.ascent = Math.max(s.ascent, p.ascent);
+        s.descent = Math.max(s.descent, p.descent);
+        s.width += p.width;
+        s.length += p.run.text.length;
+        s.plainText += p.run.text;
     });
-    return section;
+    return s;
 };
 
 module.exports = function(coords) {
+    var text, space;
     if (!coords) {
-        return coords;
+        // special end-of-document marker, mostly like a newline with no formatting
+        text = [{ text: measure.enter }];
+        return Object.create(prototype, {
+            text: { value: section(text) },
+            space: { value: section([]) },
+            ascent: { value: text.ascent },
+            descent: { value: text.descent },
+            width: { value: text.width },
+            eof: { value: true }
+        });
     }
-    var text = measure(coords.text.cut(coords.spaces));
-    var space = measure(coords.spaces.cut(coords.end));
+    text = section(coords.text.cut(coords.spaces));
+    space = section(coords.spaces.cut(coords.end));
     return Object.create(prototype, {
         text: { value: text },
         space: { value: space },
         ascent: { value: Math.max(text.ascent, space.ascent) },
         descent: { value: Math.max(text.descent, space.descent) },
-        width: { value: text.width + space.width }
+        width: { value: text.width + space.width },
+        plainText: { value: text.plainText + space.plainText }
     });
 };

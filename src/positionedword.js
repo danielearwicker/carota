@@ -1,10 +1,17 @@
 var rect = require('./rect');
 var part = require('./part');
+var measure = require('./measure');
+
+var newLineWidth = function(run) {
+    return measure.cachedMeasureText(measure.enter, measure.getFontString(run)).width;
+};
 
 var positionedChar = {
     bounds: function() {
         var wb = this.word.bounds();
-        var width = this.word.word.isNewLine() ? 20 : this.part.width;
+        var width = this.word.word.isNewLine()
+            ? newLineWidth(this.word.word.run)
+            : this.part.width;
         return rect(wb.l + this.left, wb.t, width, wb.h);
     }
 };
@@ -21,14 +28,14 @@ var positionedChar = {
                   - Returns a rect for the bounding box.
  */
 var prototype = {
-    draw: function(ctx, x, y) {
-        this.word.draw(ctx, this.left + x, this.line.baseline + y);
+    draw: function(ctx) {
+        this.word.draw(ctx, this.left, this.line.baseline);
     },
     bounds: function() {
         return rect(
             this.left,
             this.line.baseline - this.line.ascent,
-            this.word.width,
+            this.word.width || newLineWidth(this.word.run),
             this.line.ascent + this.line.descent);
     },
     parts: function(eachPart) {
@@ -39,6 +46,13 @@ var prototype = {
         if (index >= this.ordinal && index < this.ordinal + this.length) {
             return this.positionedCharacters()[index - this.ordinal];
         }
+    },
+    lastCharacter: function() {
+        var chars = this.positionedCharacters();
+        return chars[chars.length - 1];
+    },
+    firstCharacter: function() {
+        return this.positionedCharacters()[0];
     },
     realiseCharacters: function() {
         if (!this._characters) {
