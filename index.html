@@ -3,21 +3,22 @@
 <head>
     <title></title>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="lib/jquery-txtinput-1.1.js"></script>
+    <script src="lib/jquery-caret.js"></script>
     <script src="carota-bundle.js"></script>
+    <style>
+        .unselectable {
+            -moz-user-select: -moz-none;
+            -khtml-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
 </head>
 <body>
-<table>
-    <tr>
-        <td>
-            <canvas width="500" height="1500" style="border: 1px solid silver" tabindex="1"></canvas>
-        </td>
-        <td style="vertical-align: top;">
-            <input type="text" id="selectionStart">
-            <input type="text" id="selectionEnd">
-            <br>
-            <textarea id="hiddenTextArea"></textarea>
-        </td>
-    </tr>
-</table>
+    <div><input type="text" id="selectionStart"><input type="text" id="selectionEnd"></div>
+    <div id="carota" style="overflow: auto; width: 520px; height: 500px;">
+    </div>
 </body>
 </html>

@@ -1,5 +1,6 @@
 var positionedWord = require('./positionedword');
 var rect = require('./rect');
+var node = require('./node');
 
 /*  A Line is returned by the wrap function. It contains an array of PositionedWord objects that are
     all on the same physical line in the wrapped text.
@@ -15,26 +16,21 @@ var rect = require('./rect');
         bounds()
                   - Returns a Rect for the bounding box.
  */
-var prototype = {
+
+var prototype = node.derive({
     draw: function(ctx) {
         this.positionedWords.forEach(function(word) {
             word.draw(ctx);
         });
     },
-    firstWord: function() {
-        return this.positionedWords[0];
-    },
-    lastWord: function() {
-        return this.positionedWords[this.positionedWords.length - 1];
-    },
     bounds: function(minimal) {
         if (minimal) {
-            var firstWord = this.firstWord().bounds(),
-                lastWords = this.lastWord().bounds();
+            var firstWord = this.first().bounds(),
+                lastWord = this.last().bounds();
             return rect(
                 firstWord.l,
                 this.baseline - this.ascent,
-                lastWords.l + lastWords.w,
+                lastWord.l + lastWord.w,
                 this.ascent + this.descent);
         }
         return rect(0, this.baseline - this.ascent,
@@ -52,8 +48,20 @@ var prototype = {
                 return result;
             }
         }
-    }
-};
+    },
+    plainText: function() {
+        return this.positionedWords.map(function(pw) {
+            return pw.plainText();
+        }).join('');
+    },
+    parent: function() {
+        return this.doc;
+    },
+    children: function() {
+        return this.positionedWords;
+    },
+    type: 'line'
+});
 
 module.exports = function(doc, width, baseline, ascent, descent, words, ordinal) {
 

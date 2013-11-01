@@ -36,6 +36,9 @@ var prototype = {
             part.draw(ctx, x, y);
             x += part.width;
         });
+    },
+    plainText: function() {
+        return this.text.plainText + this.space.plainText;
     }
 };
 
@@ -79,7 +82,6 @@ module.exports = function(coords) {
         space: { value: space },
         ascent: { value: Math.max(text.ascent, space.ascent) },
         descent: { value: Math.max(text.descent, space.descent) },
-        width: { value: text.width + space.width },
-        plainText: { value: text.plainText + space.plainText }
+        width: { value: text.width + space.width }
     });
 };

@@ -1,20 +1,32 @@
+var per = require('per');
 var rect = require('./rect');
 var part = require('./part');
 var measure = require('./measure');
+var node = require('./node');
+var split = require('./split');
+var word = require('./word');
+var characters = require('./characters');
 
 var newLineWidth = function(run) {
     return measure.cachedMeasureText(measure.enter, measure.getFontString(run)).width;
 };
 
-var positionedChar = {
+var positionedChar = node.derive({
     bounds: function() {
         var wb = this.word.bounds();
         var width = this.word.word.isNewLine()
             ? newLineWidth(this.word.word.run)
             : this.part.width;
         return rect(wb.l + this.left, wb.t, width, wb.h);
-    }
-};
+    },
+    plainText: function() {
+        return this.part.run.text;
+    },
+    parent: function() {
+        return this.word;
+    },
+    type: 'character'
+});
 
 /*  A positionedWord is just a realised Word plus a reference back to the containing Line and
     the left coordinate (x coordinate of the left edge of the word).
@@ -27,7 +39,7 @@ var positionedChar = {
         bounds()
                   - Returns a rect for the bounding box.
  */
-var prototype = {
+var prototype = node.derive({
     draw: function(ctx) {
         this.word.draw(ctx, this.left, this.line.baseline);
     },
@@ -44,15 +56,8 @@ var prototype = {
     },
     characterByOrdinal: function(index) {
         if (index >= this.ordinal && index < this.ordinal + this.length) {
-            return this.positionedCharacters()[index - this.ordinal];
+            return this.children()[index - this.ordinal];
         }
-    },
-    lastCharacter: function() {
-        var chars = this.positionedCharacters();
-        return chars[chars.length - 1];
-    },
-    firstCharacter: function() {
-        return this.positionedCharacters()[0];
     },
     realiseCharacters: function() {
         if (!this._characters) {
@@ -68,7 +73,8 @@ var prototype = {
                         left: { value: x },
                         part: { value: p },
                         word: { value: self },
-                        ordinal: { value: ordinal }
+                        ordinal: { value: ordinal },
+                        length: { value: 1 }
                     }));
                     x += p.width;
                     ordinal++;
@@ -77,11 +83,18 @@ var prototype = {
             this._characters = cache;
         }
     },
-    positionedCharacters: function() {
+    children: function() {
         this.realiseCharacters();
         return this._characters;
-    }
-};
+    },
+    plainText: function() {
+        return this.word.plainText();
+    },
+    parent: function() {
+        return this.line;
+    },
+    type: 'word'
+});
 
 module.exports = function(word, line, left, ordinal) {
     return Object.create(prototype, {

@@ -12,7 +12,6 @@ var prototype = {
     cut: function(upTo) {
         compatible(this, upTo);
         var self = this;
-
         return function(eachRun) {
             for (var runIndex = self._run; runIndex <= upTo._run; runIndex++) {
                 var run = self._runs[runIndex];
