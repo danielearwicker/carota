@@ -39,6 +39,10 @@ var prototype = {
     },
     plainText: function() {
         return this.text.plainText + this.space.plainText;
+    },
+    align: function() {
+        var first = this.text.parts[0];
+        return first ? first.run.align : 'left';
     }
 };
 

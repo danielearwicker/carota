@@ -38,8 +38,11 @@ DocumentRange.prototype.plainText = function() {
 };
 
 DocumentRange.prototype.clear = function() {
-    this.doc.remove(this.start, this.end);
-    this.end = this.start;
+    return this.setText([]);
+};
+
+DocumentRange.prototype.setText = function(text) {
+    return this.doc.splice(this.start, this.end, text);
 };
 
 var wordCharRuns = function(positionedWord) {
@@ -67,56 +70,60 @@ var prototype = node.derive({
     selectedRange: function() {
         return this.range(this.selection.start, this.selection.end);
     },
-    remove: function(start, end) {
-
-    },
-    insert: function(ordinal, runs) {
-        var beforeChar = this.characterByOrdinal(ordinal);
-        if (typeof runs === 'string') {
-            runs = [
-                Object.create((beforeChar.previous() || beforeChar).part.run, {
-                    text: { value: runs }
+    splice: function(start, end, text) {
+        var startChar = this.characterByOrdinal(start),
+            endChar = start === end ? startChar : this.characterByOrdinal(end);
+        if (typeof text === 'string') {
+            text = [
+                Object.create((startChar.previous() || startChar).part.run, {
+                    text: { value: text }
                 })
             ];
         }
 
-        var length = 0;
-        runs.forEach(function(run) {
-            length += run.text.length;
-        });
-
-        var pword = beforeChar.parent();
-
         var allWords = this.words;
-        var wordIndex = allWords.indexOf(pword.word);
-        var wordChars = wordCharRuns(pword);
 
-        var prefix, suffix, wordStart, wordCount;
-        if (beforeChar.ordinal === pword.ordinal) {
-            var previousWord = pword.previous();
-            prefix = !previousWord ? [] : wordCharRuns(previousWord);
-            suffix = wordChars;
-            wordStart = wordIndex - 1;
-            wordCount = 2;
+        var startWord = startChar.parent();
+        var startWordIndex = allWords.indexOf(startWord.word);
+        var startWordChars = wordCharRuns(startWord);
+
+        var endWord = endChar.parent();
+        var endWordIndex = endWord === startWord ? startWordIndex : allWords.indexOf(endWord.word);
+        var endWordChars = endWord === startWord ? startWordChars : wordCharRuns(endWord);
+
+        var prefix;
+        if (startChar.ordinal === startWord.ordinal) {
+            var previousWord = startWord.previous();
+            if (previousWord) {
+                prefix = wordCharRuns(previousWord);
+                startWordIndex--;
+            } else {
+                prefix = [];
+            }
         } else {
-            var offset = beforeChar.ordinal - pword.ordinal;
-            prefix = wordChars.slice(0, offset);
-            suffix = wordChars.slice(offset);
-            wordStart = wordIndex;
-            wordCount = 1;
+            prefix = startWordChars.slice(0, startChar.ordinal - startWord.ordinal);
         }
 
-        var newRuns = runs.consolidate(prefix.concat(runs).concat(suffix));
+        var suffix;
+        if (endChar.ordinal === endWord.ordinal) {
+            suffix = wordCharRuns(endWord);
+        } else {
+            suffix = endWordChars.slice(endChar.ordinal - endWord.ordinal);
+        }
+
+        var oldLength = this.length();
+        var newRuns = runs.consolidate(prefix.concat(text).concat(suffix));
         var newWords = per(characters(newRuns))
             .per(split())
             .truthy()
             .map(word)
             .all();
         Array.prototype.splice.apply(
-            allWords, [wordStart, wordCount].concat(newWords));
+            allWords, [startWordIndex, (endWordIndex - startWordIndex) + 1].concat(newWords)
+        );
         this.layout();
-        this.selection.start = this.selection.end = ordinal + length;
-        return length;
+
+        return this.length() - oldLength;
     },
     width: function(width) {
         if (arguments.length === 0) {

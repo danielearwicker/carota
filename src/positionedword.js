@@ -42,6 +42,10 @@ var positionedChar = node.derive({
 var prototype = node.derive({
     draw: function(ctx) {
         this.word.draw(ctx, this.left, this.line.baseline);
+
+        // Handy for showing how word boundaries work
+        // var b = this.bounds();
+        // ctx.strokeRect(b.l, b.t, b.w, b.h);
     },
     bounds: function() {
         return rect(

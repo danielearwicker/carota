@@ -65,20 +65,44 @@ var prototype = node.derive({
 
 module.exports = function(doc, width, baseline, ascent, descent, words, ordinal) {
 
+    var align = words[0].align();
+
     var line = Object.create(prototype, {
         doc: { value: doc },
         width: { value: width },
         baseline: { value: baseline },
         ascent: { value: ascent },
         descent: { value: descent },
-        ordinal: { value: ordinal }
+        ordinal: { value: ordinal },
+        align: { value: align }
     });
 
-    var x = 0;
+    var x = 0, spacing = 0, actualWidth = function() {
+        var total = 0;
+        words.forEach(function(word) {
+            total += word.width;
+        });
+        return total - words[words.length - 1].space.width;
+    };
+
+    switch (align) {
+        case 'right':
+            x = width - actualWidth();
+            break;
+        case 'center':
+            x = (width - actualWidth()) / 2;
+            break;
+        case 'justify':
+            if (!words[words.length - 1].isNewLine()) {
+                spacing = (width - actualWidth()) / words.length;
+            }
+            break;
+    }
+
     Object.defineProperty(line, 'positionedWords', {
         value: words.map(function(word) {
             var left = x;
-            x += word.width;
+            x += (word.width + spacing);
             var wordOrdinal = ordinal;
             ordinal += (word.text.length + word.space.length);
             return positionedWord(word, line, left, wordOrdinal);

@@ -34,7 +34,7 @@ exports.getRunStyle = function(run) {
 };
 
 var nbsp = exports.nbsp = String.fromCharCode(160);
-var enter = exports.enter = String.fromCharCode(9166);
+var enter = exports.enter = nbsp; // String.fromCharCode(9166);
 
 /*  Returns width, height, ascent, descent in pixels for the specified text and font.
  The ascent and descent are measured from the baseline.

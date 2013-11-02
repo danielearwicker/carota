@@ -41,16 +41,21 @@ $(function() {
         var key = ev.which;
         var selecting = !!ev.shiftKey;
         var handled = false;
+
         if (!selecting) {
             keyboardSelect = 0;
         } else if (!keyboardSelect) {
             switch (key) {
                 case 37: // left arrow
                 case 38: // up - find character above
+                case 36: // start of line
+                case 33: // page up
                     keyboardSelect = -1;
                     break;
                 case 39: // right arrow
                 case 40: // down arrow - find character below
+                case 35: // end of line
+                case 34: // page down
                     keyboardSelect = 1;
                     break;
             }
@@ -65,6 +70,8 @@ $(function() {
                     var charBounds = char.bounds();
                     keyboardX = charBounds.l + (charBounds.w / 2);
                 }
+                keyboardX = Math.min(Math.max(keyboardX, 0), carotaDocument.width() - 1);
+
                 var nextLine = char.parent().parent()[direction]();
                 if (!nextLine) {
                     ordinal = limit;
@@ -83,64 +90,114 @@ $(function() {
             }
         };
 
+        var changingCaret = false;
         switch (ev.which) {
             case 37: // left arrow
                 if (!selecting && start != end) {
                     ordinal = start;
                 } else {
                     if (ordinal > 0) {
-                        ordinal--;
+                        if (ev.ctrlKey) {
+                            var c = carotaDocument.characterByOrdinal(ordinal);
+                            if (c.ordinal === c.word.ordinal) {
+                                ordinal = c.word.previous().ordinal;
+                            } else {
+                                ordinal = c.word.ordinal;
+                            }
+                        } else {
+                            ordinal--;
+                        }
                     }
                 }
                 keyboardX = null;
-                handled = true;
+                changingCaret = true;
                 break;
             case 39: // right arrow
                 if (!selecting && start != end) {
                     ordinal = end;
                 } else {
                     if (ordinal < length) {
-                        ordinal++;
+                        if (ev.ctrlKey) {
+                            ordinal = carotaDocument.characterByOrdinal(ordinal).word.next().ordinal;
+                        } else {
+                            ordinal++;
+                        }
                     }
                 }
                 keyboardX = null;
-                handled = true;
+                changingCaret = true;
                 break;
             case 40: // down arrow - find character below
                 changeLine('next', length);
-                handled = true;
+                changingCaret = true;
                 break;
             case 38: // up - find character above
                 changeLine('previous', 0);
-                handled = true;
+                changingCaret = true;
+                break;
+            case 36: // start of line
+                ordinal = carotaDocument.characterByOrdinal(ordinal).word.line.ordinal;
+                changingCaret = true;
+                break;
+            case 35: // end of line
+                ordinal = carotaDocument.characterByOrdinal(ordinal).word.line.last().last().ordinal;
+                changingCaret = true;
+                break;
+            case 33: // page up
+                ordinal = 0;
+                changingCaret = true;
+                break;
+            case 34: // page down
+                ordinal = carotaDocument.length() - 1;
+                changingCaret = true;
+                break;
+            case 8: // backspace
+                if (start === end && start > 0) {
+                    carotaDocument.range(start - 1, start).clear();
+                    focusChar = start - 1;
+                    select(focusChar, focusChar);
+                    handled = true;
+                }
+                break;
+            case 46: // del
+                if (start === end && start < length) {
+                    carotaDocument.range(start, start + 1).clear();
+                    handled = true;
+                }
                 break;
         }
 
-        switch (keyboardSelect) {
-            case 0:
-                start = end = ordinal;
-                break;
-            case -1:
-                start = ordinal;
-                break;
-            case 1:
-                end = ordinal;
-                break;
-        }
-
-        if (start === end) {
-            keyboardSelect = 0;
-        } else {
-            if (start > end) {
-                keyboardSelect = -keyboardSelect;
-                var t = end;
-                end = start;
-                start = t;
+        if (changingCaret) {
+            switch (keyboardSelect) {
+                case 0:
+                    start = end = ordinal;
+                    break;
+                case -1:
+                    start = ordinal;
+                    break;
+                case 1:
+                    end = ordinal;
+                    break;
             }
-        }
-        focusChar = ordinal;
-        select(start, end);
 
+            if (start === end) {
+                keyboardSelect = 0;
+            } else {
+                if (start > end) {
+                    keyboardSelect = -keyboardSelect;
+                    var t = end;
+                    end = start;
+                    start = t;
+                }
+            }
+            focusChar = ordinal;
+            select(start, end);
+            handled = true;
+        }
+
+        if (handled) {
+            return false;
+        }
         console.log(ev.which);
     });
 
@@ -164,15 +221,11 @@ $(function() {
         if (textAreaContent != newText) {
             textAreaContent = '';
 
-            //if (carotaDocument.selectedRange().plainText() != newText)
+            carotaDocument.selection.end += carotaDocument.selectedRange().setText(newText);
+            carotaDocument.selection.start = carotaDocument.selection.end;
 
             textArea.val('');
-            var char = carotaDocument.characterByOrdinal(carotaDocument.selection.start);
-            if (char) {
-                carotaDocument.selection.start += char.insert(newText);
-                carotaDocument.selection.end = carotaDocument.selection.start;
-                paint();
-            }
+            paint();
         }
     });
 
