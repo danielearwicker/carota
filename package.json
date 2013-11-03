@@ -2,7 +2,7 @@
     "name": "carota",
     "author": "Daniel Earwicker (dan@earwicker.com)",
     "description": "Simple, flexible rich text rendering/editing on HTML Canvas",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "repository": {
         "type": "git",
         "url": "https://github.com/danielearwicker/carota.git"

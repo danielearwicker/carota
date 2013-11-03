@@ -2,6 +2,7 @@ var editor = require('./editor');
 var doc = require('./doc');
 var dom = require('./dom');
 var runs = require('./runs');
+var html = require('./html');
 var measure = require('./measure');
 
 var bundle = {
@@ -9,6 +10,7 @@ var bundle = {
     document: doc,
     dom: dom,
     runs: runs,
+    html: html,
     measure: measure
 };
 

@@ -2,14 +2,20 @@
 <html>
 <head>
     <title></title>
-    <script src="carota-min.js"></script>
+    <script src="carota-debug.js"></script>
     <style>
         #exampleToolbar {
             position: absolute;
             left: 10px;
             top: 10px;
             right: 10px;
-            height: 30px;
+            height: 27px;
+            overflow: hidden;
+        }
+
+        #exampleToolbar label {
+            border: 1px solid silver;
+            padding: 1px 2px 0 1px;
         }
 
         #exampleEditor {
@@ -17,23 +23,58 @@
             position: absolute;
             left: 10px;
             top: 40px;
+            right: 50%;
+            bottom: 40px;
+        }
+
+        #examplePersistence {
+            position: absolute;
+            top: 40px;
+            width: 50%;
+            right: 0;
+            bottom: 40px;
+        }
+
+        #examplePersistence div {
+            position: absolute;
+            left: 10px;
+            top: 0;
+            right: 10px;
+            bottom: 0;
+            background: rgb(30, 30, 30);
+            color: rgb(0, 200, 20);
+            overflow: auto;
+        }
+
+        #pageLinks {
+            position: absolute;
+            left: 10px;
+            height: 20px;
             right: 10px;
             bottom: 10px;
+            overflow: hidden;
+            text-align: center;
+            font-family: sans-serif;
         }
 
         button img {
             width: 12px;
             height: 12px;
         }
+
+        .editablePage {
+            display: none
+        }
     </style>
 </head>
 <body>
     <div id="exampleToolbar">
         <select id="font">
-            <option>Helvetica</option>
-            <option>Times</option>
-            <option>Georgia</option>
-            <option>Courier</option>
+            <option value="serif">Times</option>
+            <option value="sans-serif">Helvetica</option>
+            <option value="monospace">Courier</option>
+            <option value="cursive">Cursive</option>
+            <option value="fantasy">Fantasy</option>
         </select>
         <select id="size">
             <option>8</option>
@@ -46,13 +87,14 @@
             <option>18</option>
             <option>20</option>
             <option>24</option>
+            <option>30</option>
             <option>36</option>
             <option>72</option>
         </select>
-        <label><input type="checkbox" id="bold"> <strong>B</strong></label> |
-        <label><input type="checkbox" id="italic"> <em>i</em></label> |
-        <label><input type="checkbox" id="underline"> <u>u</u></label> |
-        <label><input type="checkbox" id="strikeout"> <strike>s</strike></label>
+        <label><input type="checkbox" id="bold"><strong>B</strong></label>
+        <label><input type="checkbox" id="italic"><em>i</em></label>
+        <label><input type="checkbox" id="underline"><u>u</u></label>
+        <label><input type="checkbox" id="strikeout"><strike>s</strike></label>
         <select id="align">
             <option value="left">Left</option>
             <option value="center">Center</option>
@@ -71,9 +113,178 @@
             <option value="blue">Blue</option>
         </select>
         <button id="smiley"><img src="smiley.png"></button>
+        <button id="undo">Undo</button>
+        <button id="redo">Redo</button>
     </div>
 
     <div id="exampleEditor"></div>
+
+    <div id="examplePersistence">
+        <div>
+            <pre></pre>
+        </div>
+    </div>
+
+    <div id="pageLinks">
+        <a href="#welcome">Welcome!</a> |
+        <a href="#why">Why?</a> |
+        <a href="#how">How does it work?</a> |
+        <a href="#usage">Usage</a> |
+        <a href="http://github.com/danielearwicker/carota">Source on Github</a>
+    </div>
+
+    <div class="editablePage" id="welcome">
+        <h1>Welcome!</h1>
+        <br>
+        <p>You've found the demo page for <span class="carota">Carota</span>, a rich text editor
+            implemented entirely in JavaScript that uses HTML5 Canvas for rendering. Most in-browser
+            editors use a built-in feature called <code>contentEditable</code> to do most of the
+            hard work, but this has some limitations and drawbacks that are just too much for more
+            sensitive people, like me, to bear, so I decided to start from scratch.
+            (Anyway, it's fun to write your own editor!)
+        </p>
+        <br>
+        <p>The source code is released under the very permissive <strong>MIT license</strong>,
+            so you can do pretty much anything you want with it.
+        </p>
+        <br>
+        <p>At runtime Carota has <em>no external dependencies</em>. You just pull in the
+            carota-min.js file using the SCRIPT tag and away you go. Or else get node and use:
+        </p>
+        <br>
+        <p>
+        <code>npm install carota</code>
+        </p>
+        <br>
+        <p>to get the full source, including this demo site. By the way,
+            <span class="carota">Carota</span> itself is displaying all this text, meaning that
+            you can play with the editor right now! Try <code>Ctrl+A</code> and then
+            <code>Backspace</code> to clear this document and see how the JSON view on the right
+            changes as you make further edits. Press <code>Ctrl+Z</code> to undo your changes.
+        </p>
+        <br>
+        <p><strong>Click the links below for more information...</strong><p>
+        </p>
+    </div>
+
+    <div class="editablePage" id="why">
+        <h1>Why might you need this?</h1>
+        <br>
+        <p>For many people's needs, the <code>contentEditable</code> attribute in modern browsers is
+           quite adequate. But if you need more control over rich text editing it is sadly a dead
+            end.</p>
+        <br>
+        <p>The word processor in <b>Google Docs</b> does not use
+            <code>contentEditable</code>.
+           Nor does <b>Apple's Pages in iCloud</b>. Instead they have their own JavaScript-based
+           rich text rendering and editing code. Sadly they are not open source licensed!
+        </p>
+        <br>
+        <p>In some ways, <code>contentEditable</code> is too powerful. It allows your users to edit
+            every possible feature of HTML implemented by the browser. I often find that I only want
+            to support a simple form of rich text that is totally under my control. And the API for
+            representing a range within the text is quite complex because it has to deal with the
+            tree-like nature of the DOM. I wish there was a simple way to work in pure character
+            positions (i.e. mere integers).
+        </p>
+        <br>
+        <p>In other ways, <code>contentEditable</code> is frustratingly inadequate. There are built-in
+            commands for applying formatting changes to the current selection, but they <em>suck</em>,
+            especially setting the font size. There are bugs and quirks that vary between browsers.
+            Taming <code>contentEditable</code> can become a full-time job in itself.
+        </p>
+        <br>
+        <p>Bear in mind that <span class="carota">Carota</span> does not implement all the same
+            features as HTML's <code>contentEditable</code>. If you're okay with the limitations of
+            <code>contentEditable</code> then by all means you should stick with it.
+        </p>
+    </div>
+
+    <div class="editablePage" id="how">
+        <h1>How does it work?</h1>
+        <br>
+        <p>Several representations of text play a part in <span class="carota">Carota</span>.</p>
+        <br>
+        <p><b>JSON</b> is the cornerstone of persistence in JavaScript. It is used here to
+            represent rich text, which is just an array of objects. Each object is called a
+            <i>run</i>, and has a property called <code>text</code> and various other optional
+            properties to specify the formatting for the text in the run. The text can include
+            inline objects of your own invention, which you can tell
+            <span class="carota">Carota</span> how to represent. (That's how the smiley icons
+            work in this demo - try inserting one!)
+        </p>
+        <br>
+        <p><b>Characters</b> are objects representing the characters in the text as a single
+            continuous stream of objects. This is an abstraction over the JSON format to make
+            it easy to split the text into words. An inline object acts like a single character.
+        </p>
+        <br>
+        <p><b>Words</b> are objects representing the words in the text, the output of the
+            word-breaking process. A word has two parts: the non-space characters, and the
+            trailing space characters. Either part may be empty, but not both. (A new line is
+            always emitted as a separate word.) Of course, a word can contain regions of the
+            text with different formatting. All edits to the document involve modifying the
+            list of words. Words store their own dimensions (<code>width</code>,
+            <code>ascent</code> and <code>descent</code>).
+        </p>
+        <br>
+        <p><b>Static</b> representation is the result of word-wrapping. Every time the word
+            list is modified, wrapping must be performed, but it's pretty fast because we
+            already know the dimensions of each word. The static representation is a list
+            of <code>Line</code> objects, and each line contains a list of
+            <code>PositionedWord</code> objects, each of which contains a list of
+            <code>PositionedCharacter</code> objects. These objects form a uniform hierarchy
+            of nodes, and at the root is the <code>Document</code>. Everything is already
+            positioned, so drawing to the canvas is fast, and implementing the editor is
+            pretty easy. Also any custom inline objects are converted into handlers that
+            know how to render them.
+        </p>
+        <br>
+        <p>Those are the main core representations involved. In addition a subset of
+            <b>HTML</b> can be loaded into the editor via a parser that converts it into the
+            native JSON format.
+        </p>
+    </div>
+
+    <div class="editablePage" id="usage">
+        <h1>How to use it</h1>
+        <br>
+        <p>First, the bad news: if you need to support IE8 and earlier, then
+        <span class="carota">Carota</span> is not for you. Right now it requires
+        Canvas. It may be extended in the future to support other ways of rendering.</p>
+        <br>
+        <p>This demo page has been deliberately set up to make it easy to learn from,
+        the old fashioned way: using the <em>View source</em> command. Everything is
+        in a single index.html file.</p>
+        <br>
+        <p>It begins with some basic CSS styling, mostly for positioning. Then there
+        is the HTML, most of which is for the "toolbar". <span class="carota">Carota</span>
+        does not have a built-in toolbar, but it's very easy to wire up your own
+        controls to it. This page does it in about 30 lines of code.</p>
+        <br>
+        <p>The text for these pages is held in some hidden DIVs, which get parsed
+        into the native JSON format and then loaded into the editor.</p>
+        <br>
+        <p>Finally there is a PRE element that displays the JSON saved from the editor,
+        every time you make an edit.</p>
+        <br>
+        <p>The parts of the code that interact with <span class="carota">Carota</span>
+        (there isn't much) works by calling <code>carota.editor.create</code> to cause the
+        editor to be created. Then methods are called on the resulting object to
+        <code>load</code> this text, to subscribe to events (<code>selectionChanged</code>,
+        <code>contentChanged</code>), to <code>performUndo</code> (and discover if we
+        <code>canUndo</code>), to query or modify the <code>selectedRange</code> and to
+        <code>insert</code> inline elements (the smiley button).</p>
+
+        <br>
+        <p>There are also a handful of calls to functions in <code>carota.dom</code> which
+        is just a very minimal helper library for conveniently wiring up events, etc. In
+        your own code you'll probably want to use a more full-featured alternative like
+        jQuery, etc. <span class="carota">Carota</span> deliberately avoids depending on
+        any such general DOM-manipulation library so it can integrate with anything.
+        </p>
+
+    </div>
 
     <script>
     window.onload = function() {
@@ -82,28 +293,54 @@
 
         // Set up our custom inline - a smiley emoji
         var smiley = document.querySelector('#smiley img');
-        exampleEditor.document.inlines = function(obj) {
+        var defaultInlines = exampleEditor.inlines;
+        exampleEditor.inlines = function(obj) {
             if (obj.smiley) {
+                // Must return an object that encapsulates the inline
                 return {
+                    // measure: must return width, ascent and descent
                     measure: function(/*measureText*/) {
+                        // The measureText parameter can optionally be used to
+                        // get width/ascent/descent for a string of text in the
+                        // current font (inlines can be formatted as usual).
                         return {
                             width: 24,
                             ascent: 24,
                             descent: 0
                         };
                     },
+                    // draw: implements the appearance of the inline on canvas
                     draw: function(ctx, x, y, width, ascent, descent) {
                         ctx.drawImage(smiley, x, y - ascent, width, ascent);
                     }
                 }
             }
+
+            // Call the default in case there are built-in ones
+            return defaultInlines(obj);
         };
 
-        // Inserting the inline
+        // Setting up the button so user can insert a smiley
         carota.dom.handleEvent(document.querySelector('#smiley'), 'click', function() {
-            exampleEditor.document.insert({ smiley: true });
+            exampleEditor.insert({ smiley: true });
         });
 
+        // Wire up undo/redo commands
+        var undo = document.querySelector('#undo'),
+            redo = document.querySelector('#redo');
+
+        carota.dom.handleEvent(undo, 'click', function() {
+            exampleEditor.performUndo(false);
+        });
+
+        carota.dom.handleEvent(redo, 'click', function() {
+            exampleEditor.performUndo(true);
+        });
+
+        var updateUndo = function() {
+            undo.disabled = !exampleEditor.canUndo(false);
+            redo.disabled = !exampleEditor.canUndo(true);
+        };
 
         // Wire up the toolbar controls
         ['font', 'size', 'bold', 'italic', 'underline',
@@ -112,16 +349,15 @@
 
             // When the control changes value, update the selected range's formatting
             carota.dom.handleEvent(elem, 'change', function() {
-                var range = exampleEditor.document.selectedRange();
+                var range = exampleEditor.selectedRange();
                 var val = elem.nodeName === 'INPUT' ? elem.checked : elem.value;
                 range.setFormatting(id, val);
-                exampleEditor.paint();
             });
 
             // When the selected range coordinates change, update the control
             exampleEditor.selectionChanged(function(getFormatting) {
                 var formatting = getFormatting();
-                var val = id in formatting ? formatting[id] : carota.measure.defaultFormatting[id];
+                var val = id in formatting ? formatting[id] : carota.runs.defaultFormatting[id];
                 if (elem.nodeName === 'INPUT') {
                     if (val === carota.runs.multipleValues) {
                         elem.indeterminate = true;
@@ -135,23 +371,54 @@
             });
         });
 
-        var sampleText = [
-            { text: 'Welcome!', size: 20, bold: true },
-            { text: '\n\nYou\'ve found the demo page for '
-            },
-            { text: 'Carota', size: 14, bold: true, color: 'orange' },
-            { text: ', a rich text editor implemented in JavaScript ' +
-                    'that uses HTML5 Canvas for rendering.'
-            },
-            { text: '\n\nAt runtime Carota has ' },
-            { text: 'no external dependencies', bold: true },
-            { text: '. You just pull in the carota-min.js ' +
-                    'using the SCRIPT tag and away you go. Or else get node and use:\n\n' },
-            { text: '    npm install carota', font: 'Courier' },
-            { text: '\n\nto get the full source.' },
-        ];
+        // We don't update the JSON view until half a second after the last change
+        // to avoid slowing things down too much
+        var updateTimer = null;
+        var updatePersistenceView = function() {
+            if (updateTimer !== null) {
+                clearTimeout(updateTimer);
+            }
+            updateTimer = setTimeout(function() {
+                updateTimer = null;
+                carota.dom.setText(
+                    document.querySelector('#examplePersistence pre'),
+                    JSON.stringify(exampleEditor.save(), null, 4));
+            }, 500);
+        };
 
-        exampleEditor.load(sampleText);
+        // Whenever the document changes, re-display the JSON format and update undo buttons
+        exampleEditor.contentChanged(function() {
+            updateUndo();
+            updatePersistenceView();
+        });
+
+        // Load one of the hidden chunks of HTML
+        var load = function(selector) {
+            var html = document.querySelector(selector);
+            if (html) {
+                var runs = carota.html.parse(html, {
+                    carota: { color: 'orange', bold: true, size: 14 }
+                });
+                exampleEditor.load(runs);
+            }
+        };
+
+        // Set up the page links so they call load
+        var pageLinks = document.querySelectorAll('#pageLinks a');
+        for (var n = 0; n < pageLinks.length; n++) {
+            (function() {
+                var pageLink = pageLinks[n];
+                var ref = pageLink.attributes['href'].value;
+                if (ref[0] === '#') {
+                    carota.dom.handleEvent(pageLink, 'click', function() {
+                        load(ref);
+                        return false;
+                    });
+                }
+            })();
+        }
+
+        load('#welcome');
     };
     </script>
 </body>

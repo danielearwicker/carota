@@ -1,20 +1,10 @@
-var textStyleDefaults = exports.defaultFormatting = {
-    size: 10,
-    font: 'Helvetica',
-    color: 'black',
-    bold: false,
-    italic: false,
-    underline: false,
-    strikeout: false,
-    align: 'left',
-    script: 'normal'
-};
+var runs = require('./runs');
 
 /*  Returns a font CSS/Canvas string based on the settings in a run
  */
 var getFontString = exports.getFontString = function(run) {
 
-    var size = (run && run.size) || textStyleDefaults.size;
+    var size = (run && run.size) || runs.defaultFormatting.size;
 
     if (run) {
         switch (run.script) {
@@ -28,13 +18,13 @@ var getFontString = exports.getFontString = function(run) {
     return (run && run.italic ? 'italic ' : '') +
            (run && run.bold ? 'bold ' : '') + ' ' +
             size + 'pt ' +
-          ((run && run.font) || textStyleDefaults.font);
+          ((run && run.font) || runs.defaultFormatting.font);
 };
 
 /*  Applies the style of a run to the canvas context
  */
 exports.applyRunStyle = function(ctx, run) {
-    ctx.fillStyle = (run && run.color) || textStyleDefaults.color;
+    ctx.fillStyle = (run && run.color) || runs.defaultFormatting.color;
     ctx.font = getFontString(run);
 };
 
@@ -48,7 +38,7 @@ exports.prepareContext = function(ctx) {
 exports.getRunStyle = function(run) {
     var parts = [
         'font: ', getFontString(run),
-      '; color: ', ((run && run.color) || textStyleDefaults.color)
+      '; color: ', ((run && run.color) || runs.defaultFormatting.color)
     ];
 
     if (run) {

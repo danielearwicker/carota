@@ -1,5 +1,17 @@
 exports.formattingKeys = [ 'bold', 'italic', 'underline', 'strikeout', 'color', 'font', 'size', 'align', 'script' ];
 
+exports.defaultFormatting = {
+    size: 10,
+    font: 'sans-serif',
+    color: 'black',
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeout: false,
+    align: 'left',
+    script: 'normal'
+};
+
 exports.sameFormatting = function(run1, run2) {
     return exports.formattingKeys.every(function(key) {
         return run1[key] === run2[key];
@@ -9,8 +21,9 @@ exports.sameFormatting = function(run1, run2) {
 exports.clone = function(run) {
     var result = { text: run.text };
     exports.formattingKeys.forEach(function(key) {
-        if (key in run) {
-            result[key] = run[key];
+        var val = run[key];
+        if (val && val != exports.defaultFormatting[key]) {
+            result[key] = val;
         }
     });
     return result;

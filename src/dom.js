@@ -7,13 +7,24 @@ exports.isAttached = function(element) {
     return !!ancestor.body;
 };
 
+exports.clear = function(element) {
+    while (element.firstChild) {
+        element.removeChild(element.firstChild);
+    }
+};
+
+exports.setText = function(element, text) {
+    exports.clear(element);
+    element.appendChild(document.createTextNode(text));
+};
+
 exports.handleEvent = function(element, name, handler) {
     element.addEventListener(name, function(ev) {
         if (handler(ev) === false) {
             ev.preventDefault();
         }
     });
-}
+};
 
 exports.handleMouseEvent = function(element, name, handler) {
     exports.handleEvent(element, name, function(ev) {

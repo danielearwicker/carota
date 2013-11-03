@@ -1,6 +1,5 @@
 var per = require('per');
 var runs = require('./runs');
-var measure = require('./measure'); // only to get measure.defaultFormatting
 
 function Range(doc, start, end) {
     this.doc = doc;
@@ -57,7 +56,7 @@ Range.prototype.getFormatting = function() {
             pos--;
         }
         var ch = this.doc.characterByOrdinal(pos);
-        return Object.create(!ch ? measure.defaultFormatting : ch.part.run);
+        return Object.create(!ch ? runs.defaultFormatting : ch.part.run);
     }
     return per(this.runs, this).reduce(runs.merge).last();
 };

@@ -7,6 +7,7 @@ var node = require('./node');
 var runs = require('./runs');
 var measure = require('./measure');
 var range = require('./range');
+var util = require('./util');
 
 var wordCharRuns = function(positionedWord) {
     return positionedWord.children().map(function(char) {
@@ -14,13 +15,32 @@ var wordCharRuns = function(positionedWord) {
     });
 };
 
+var makeEditCommand = function(doc, start, count, words) {
+    var selStart = doc.selection.start, selEnd = doc.selection.end;
+    return function(redo) {
+        var oldWords = Array.prototype.splice.apply(doc.words, [start, count].concat(words));
+        var stack = doc[redo ? 'redo' : 'undo'];
+        while (stack.length > 50) {
+            stack.shift();
+        }
+        stack.push(makeEditCommand(doc, start, words.length, oldWords));
+        doc.layout();
+        doc.contentChanged.fire();
+        doc.select(selStart, selEnd);
+    };
+};
+
 var prototype = node.derive({
     load: function(runs) {
         var self = this;
+        this.undo = [];
+        this.redo = [];
         this.words = per(characters(runs)).per(split()).map(function(w) {
             return word(w, self.inlines);
         }).all();
         this.layout();
+        this.contentChanged.fire();
+        this.select(0, 0);
     },
     layout: function() {
         this.lines = per(this.words).per(wrap(this._width, this)).all();
@@ -40,8 +60,14 @@ var prototype = node.derive({
     range: function(start, end) {
         return range(this, start, end);
     },
+    documentRange: function() {
+        return this.range(0, this.length());
+    },
     selectedRange: function() {
         return this.range(this.selection.start, this.selection.end);
+    },
+    save: function() {
+        return this.documentRange().save();
     },
     paragraphRange: function(start, end) {
         // find the character after the nearest newline before start
@@ -83,7 +109,6 @@ var prototype = node.derive({
         } else if (!Array.isArray(text)) {
             text = [{ text: text }];
         }
-
 
         var startWord = startChar.parent();
         var startWordIndex = this.words.indexOf(startWord.word);
@@ -128,11 +153,9 @@ var prototype = node.derive({
                 return word(w, self.inlines);
             })
             .all();
-        Array.prototype.splice.apply(
-            this.words, [startWordIndex, (endWordIndex - startWordIndex) + 1].concat(newWords)
-        );
-        this.layout();
 
+        this.redo.length = 0;
+        makeEditCommand(this, startWordIndex, (endWordIndex - startWordIndex) + 1, newWords)();
         return this.length() - oldLength;
     },
     width: function(width) {
@@ -200,12 +223,25 @@ var prototype = node.derive({
         }
     },
     select: function(ordinal, ordinalEnd) {
-        this.selection.start = ordinal;
-        this.selection.end = typeof ordinalEnd === 'number'
-            ? ordinalEnd : ordinal;
+        this.selection.start = Math.max(0, ordinal);
+        this.selection.end = Math.min(
+            typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
+            this.length()
+        );
         this.selectionJustChanged = true;
         this.caretVisible = true;
-        this.selectionChanged();
+
+        // When firing selectionChanged, we pass a function can be used
+        // to obtain the formatting, as this highly likely to be needed
+        var cachedFormatting = null;
+        var self = this;
+        var getFormatting = function() {
+            if (!cachedFormatting) {
+                cachedFormatting = self.selectedRange().getFormatting();
+            }
+            return cachedFormatting;
+        };
+        this.selectionChanged.fire(getFormatting);
     },
     characterByOrdinal: function(index) {
         var result = null;
@@ -259,6 +295,15 @@ var prototype = node.derive({
             found = this.last().last().last();
         }
         return found;
+    },
+    performUndo: function(redo) {
+        var op = (redo ? this.redo : this.undo).pop();
+        if (op) {
+            op(!redo);
+        }
+    },
+    canUndo: function(redo) {
+        return redo ? !!this.redo.length : !!this.undo.length;
     }
 });
 
@@ -266,11 +311,11 @@ exports = module.exports = function() {
     var doc = Object.create(prototype);
     doc._width = 0;
     doc.height = 0;
-    doc.words = [];
-    doc.lines = [];
     doc.selection = { start: 0, end: 0 };
     doc.caretVisible = true;
     doc.inlines = function() {};
-    doc.selectionChanged = function() {};
+    doc.selectionChanged = util.event();
+    doc.contentChanged = util.event();
+    doc.load([]);
     return doc;
 };

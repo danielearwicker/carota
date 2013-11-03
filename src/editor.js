@@ -7,12 +7,14 @@ setInterval(function() {
 
     var ev = document.createEvent('Event');
     ev.initEvent('carotaEditorSharedTimer', true, true);
-    //var ev = new CustomEvent('carotaEditorSharedTimer');
+
+    // not in IE, apparently:
+    // var ev = new CustomEvent('carotaEditorSharedTimer');
 
     for (var n = 0; n < editors.length; n++) {
         editors[n].dispatchEvent(ev);
     }
-}, 100);
+}, 200);
 
 exports.create = function(element) {
 
@@ -21,12 +23,13 @@ exports.create = function(element) {
         element.style.position = 'relative';
     }
 
-    element.innerHTML = '<canvas width="100" height="100" class="carotaEditorCanvas"></canvas>' +
-                        '<div style="overflow: hidden; position: absolute; height: 0;">' +
-                            '<textarea autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="0" ' +
-                            'style="position: absolute; padding: 0px; width: 1000px; height: 1em; ' +
-                            'outline: none; font-size: 4px;"></textarea>'
-                        '</div>';
+    element.innerHTML =
+        '<canvas width="100" height="100" class="carotaEditorCanvas"></canvas>' +
+        '<div style="overflow: hidden; position: absolute; height: 0;">' +
+            '<textarea autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="0" ' +
+            'style="position: absolute; padding: 0px; width: 1000px; height: 1em; ' +
+            'outline: none; font-size: 4px;"></textarea>'
+        '</div>';
 
     var canvas = element.querySelector('canvas'),
         textAreaDiv = element.querySelector('div'),
@@ -38,20 +41,6 @@ exports.create = function(element) {
         selectDragStart = null,
         focusChar = null,
         textAreaContent = '';
-
-    var selectionChanged = [];
-    doc.selectionChanged = function() {
-        var cachedFormatting = null;
-        var getFormatting = function() {
-            if (!cachedFormatting) {
-                cachedFormatting = doc.selectedRange().getFormatting();
-            }
-            return cachedFormatting;
-        };
-        selectionChanged.forEach(function(handler) {
-            handler(getFormatting);
-        });
-    };
 
     var toggles = {
         66: 'bold',
@@ -192,6 +181,24 @@ exports.create = function(element) {
                     handled = true;
                 }
                 break;
+            case 90: // Z undo
+                if (ev.ctrlKey) {
+                    handled = true;
+                    doc.performUndo();
+                }
+                break;
+            case 89: // Y undo
+                if (ev.ctrlKey) {
+                    handled = true;
+                    doc.performUndo(true);
+                }
+                break;
+            case 65: // A select all
+                if (ev.ctrlKey) {
+                    handled = true;
+                    doc.select(0, doc.length());
+                }
+                break;
         }
 
         var toggle = toggles[ev.which];
@@ -297,7 +304,7 @@ exports.create = function(element) {
         }, 10);
     };
 
-    selectionChanged.push(function() {
+    doc.selectionChanged(function() {
         paint();
         if (!selectDragStart) {
             updateTextArea();
@@ -308,6 +315,11 @@ exports.create = function(element) {
         var char = doc.characterByCoordinate(x, y);
         selectDragStart = char.ordinal;
         doc.select(char.ordinal, char.ordinal);
+    });
+
+    dom.handleMouseEvent(canvas, 'dblclick', function(ev, x, y) {
+        var char = doc.characterByCoordinate(x, y);
+        doc.select(char.word.ordinal, char.word.ordinal + char.word.word.text.length);
     });
 
     var areCharsEqual = function(a, b) {
@@ -374,15 +386,5 @@ exports.create = function(element) {
     dom.handleEvent(canvas, 'carotaEditorSharedTimer', update);
     update();
 
-    return {
-        selectionChanged: function(handler) {
-            selectionChanged.push(handler);
-        },
-        document: doc,
-        paint: paint,
-        load: function(text) {
-            doc.load(text);
-            paint();
-        }
-    };
+    return doc;
 };
