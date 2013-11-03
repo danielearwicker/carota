@@ -21,3 +21,7 @@ exports.handleMouseEvent = function(element, name, handler) {
         return handler(ev, ev.clientX - rect.left, ev.clientY - rect.top);
     });
 };
+
+exports.effectiveStyle = function(element, name) {
+    return document.defaultView.getComputedStyle(element).getPropertyValue(name);
+};

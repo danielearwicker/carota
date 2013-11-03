@@ -1,25 +1,22 @@
 var editor = require('./editor');
-var sampleText = require('./sampleText');
+var doc = require('./doc');
+var dom = require('./dom');
+var runs = require('./runs');
+var measure = require('./measure');
 
-window.onload = function() {
-    var elem = document.querySelector('#exampleEditor');
-    var exampleEditor = editor.create(elem);
-
-    exampleEditor.document.inlines = function(obj) {
-        if (obj.thing) {
-            return {
-                measure: function(measureText) {
-                    return measureText(obj.thing);
-                },
-                draw: function(ctx, x, y, width, ascent, descent) {
-                    ctx.strokeStyle = obj.thing;
-                    ctx.fillStyle = 'black';
-                    ctx.fillText(obj.thing, x, y);
-                    ctx.strokeRect(x, y - ascent, width, ascent + descent);
-                }
-            }
-        }
-    };
-
-    exampleEditor.load(sampleText);
+var bundle = {
+    editor: editor,
+    document: doc,
+    dom: dom,
+    runs: runs,
+    measure: measure
 };
+
+module.exports = bundle;
+
+if (typeof window !== 'undefined' && window.document) {
+    if (window.carota) {
+        throw new Error('Something else is called carota!');
+    }
+    window.carota = bundle;
+}

@@ -43,6 +43,9 @@ var prototype = node.derive({
     selectedRange: function() {
         return this.range(this.selection.start, this.selection.end);
     },
+    insert: function(text) {
+        this.select(this.selection.end + this.selectedRange().setText(text));
+    },
     splice: function(start, end, text) {
         var startChar = this.characterByOrdinal(start),
             endChar = start === end ? startChar : this.characterByOrdinal(end);
@@ -52,6 +55,8 @@ var prototype = node.derive({
                     text: { value: text }
                 })
             ];
+        } else if (!Array.isArray(text)) {
+            text = [{ text: text }];
         }
 
         var allWords = this.words;
@@ -147,9 +152,9 @@ var prototype = node.derive({
         }
         return this.caretVisible !== old;
     },
-    drawSelection: function(ctx) {
+    drawSelection: function(ctx, hasFocus) {
         if (this.selection.end === this.selection.start) {
-            if (this.caretVisible) {
+            if (this.selectionJustChanged || hasFocus && this.caretVisible) {
                 var char = this.characterByOrdinal(this.selection.start);
                 if (char) {
                     var charBounds = char.bounds(),
@@ -162,7 +167,7 @@ var prototype = node.derive({
             }
         } else {
             ctx.save();
-            ctx.fillStyle = 'rgba(0, 100, 200, 0.3)';
+            ctx.fillStyle = hasFocus ? 'rgba(0, 100, 200, 0.3)' : 'rgba(160, 160, 160, 0.3)';
             this.selectedRange().parts(function(part) {
                 var b = part.bounds(true);
                 ctx.fillRect(b.l, b.t, b.w, b.h);
@@ -176,6 +181,7 @@ var prototype = node.derive({
             ? ordinalEnd : ordinal;
         this.selectionJustChanged = true;
         this.caretVisible = true;
+        this.selectionChanged();
     },
     characterByOrdinal: function(index) {
         var result = null;
@@ -241,5 +247,6 @@ exports = module.exports = function() {
     doc.selection = { start: 0, end: 0 };
     doc.caretVisible = true;
     doc.inlines = function() {};
+    doc.selectionChanged = function() {};
     return doc;
 };

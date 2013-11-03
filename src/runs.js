@@ -9,7 +9,9 @@ exports.sameFormatting = function(run1, run2) {
 exports.clone = function(run) {
     var result = { text: run.text };
     exports.formattingKeys.forEach(function(key) {
-        result[key] = run[key];
+        if (key in run) {
+            result[key] = run[key];
+        }
     });
     return result;
 };
@@ -25,10 +27,12 @@ exports.merge = function(run1, run2) {
     }
     var merged = {};
     exports.formattingKeys.forEach(function(key) {
-        if (run1[key] === run2[key]) {
-            merged[key] = run1[key];
-        } else {
-            merged[key] = exports.multipleValues;
+        if (key in run1 || key in run2) {
+            if (run1[key] === run2[key]) {
+                merged[key] = run1[key];
+            } else {
+                merged[key] = exports.multipleValues;
+            }
         }
     });
     return merged;

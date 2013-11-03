@@ -1,15 +1,33 @@
-var textStyleDefaults = {
+var textStyleDefaults = exports.defaultFormatting = {
     size: 10,
     font: 'Helvetica',
-    color: 'black'
+    color: 'black',
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeout: false,
+    align: 'left',
+    script: 'normal'
 };
 
 /*  Returns a font CSS/Canvas string based on the settings in a run
  */
 var getFontString = exports.getFontString = function(run) {
+
+    var size = (run && run.size) || textStyleDefaults.size;
+
+    if (run) {
+        switch (run.script) {
+            case 'super':
+            case 'sub':
+                size *= 0.8;
+                break;
+        }
+    }
+
     return (run && run.italic ? 'italic ' : '') +
            (run && run.bold ? 'bold ' : '') + ' ' +
-          ((run && run.size) || textStyleDefaults.size) + 'pt ' +
+            size + 'pt ' +
           ((run && run.font) || textStyleDefaults.font);
 };
 
@@ -28,8 +46,23 @@ exports.prepareContext = function(ctx) {
 /* Generates the value for a CSS style attribute
  */
 exports.getRunStyle = function(run) {
-    return 'font: ' + getFontString(run) +
-        '; color: ' + ((run && run.color) || textStyleDefaults.color);
+    var parts = [
+        'font: ', getFontString(run),
+      '; color: ', ((run && run.color) || textStyleDefaults.color)
+    ];
+
+    if (run) {
+        switch (run.script) {
+            case 'super':
+                parts.push('; vertical-align: super');
+                break;
+            case 'sub':
+                parts.push('; vertical-align: sub');
+                break;
+        }
+    }
+
+    return parts.join('');
 };
 
 var nbsp = exports.nbsp = String.fromCharCode(160);

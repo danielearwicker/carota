@@ -1,5 +1,6 @@
 var per = require('per');
 var runs = require('./runs');
+var measure = require('./measure'); // only to get measure.defaultFormatting
 
 function Range(doc, start, end) {
     this.doc = doc;
@@ -48,13 +49,27 @@ Range.prototype.save = function() {
 };
 
 Range.prototype.getFormatting = function() {
+    if (this.start === this.end) {
+        var pos = this.start;
+        // take formatting of character before, if any, because that's
+        // where plain text picks up formatting when inserted
+        if (pos > 0) {
+            pos--;
+        }
+        var ch = this.doc.characterByOrdinal(pos);
+        return Object.create(!ch ? measure.defaultFormatting : ch.part.run);
+    }
     return per(this.runs, this).reduce(runs.merge).last();
 };
 
 Range.prototype.setFormatting = function(runTemplate) {
-    var saved = this.save();
-    runs.format(saved, runTemplate);
-    this.setText(saved);
+    if (this.start === this.end) {
+        // should update a "next insert" default style in the document
+    } else {
+        var saved = this.save();
+        runs.format(saved, runTemplate);
+        this.setText(saved);
+    }
 };
 
 module.exports = function(doc, start, end) {

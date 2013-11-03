@@ -37,6 +37,14 @@ var prototype = {
     draw: function(ctx, x, y) {
         measure.applyRunStyle(ctx, this.run);
         if (typeof this.run.text === 'string') {
+            switch (this.run.script) {
+                case 'super':
+                    y -= (this.ascent * (1/3));
+                    break;
+                case 'sub':
+                    y += (this.descent / 2);
+                    break;
+            }
             ctx.fillText(this.isNewLine ? measure.enter : this.run.text, x, y);
             if (this.run.underline) {
                 ctx.fillRect(x, 1 + y, this.width, 1);

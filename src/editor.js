@@ -17,7 +17,7 @@ setInterval(function() {
 exports.create = function(element) {
 
     // We need the host element to be a container:
-    if (element.style.position !== 'absolute') {
+    if (dom.effectiveStyle(element, 'position') !== 'absolute') {
         element.style.position = 'relative';
     }
 
@@ -38,6 +38,20 @@ exports.create = function(element) {
         selectDragStart = null,
         focusChar = null,
         textAreaContent = '';
+
+    var selectionChanged = [];
+    doc.selectionChanged = function() {
+        var cachedFormatting = null;
+        var getFormatting = function() {
+            if (!cachedFormatting) {
+                cachedFormatting = doc.selectedRange().getFormatting();
+            }
+            return cachedFormatting;
+        };
+        selectionChanged.forEach(function(handler) {
+            handler(getFormatting);
+        });
+    };
 
     var toggles = {
         66: 'bold',
@@ -168,7 +182,7 @@ exports.create = function(element) {
                 if (start === end && start > 0) {
                     doc.range(start - 1, start).clear();
                     focusChar = start - 1;
-                    select(focusChar, focusChar);
+                    doc.select(focusChar, focusChar);
                     handled = true;
                 }
                 break;
@@ -214,7 +228,7 @@ exports.create = function(element) {
                 }
             }
             focusChar = ordinal;
-            select(start, end);
+            doc.select(start, end);
             handled = true;
         }
 
@@ -245,10 +259,7 @@ exports.create = function(element) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         doc.draw(ctx);
-
-        if (selectDragStart || (document.activeElement === textArea)) {
-            doc.drawSelection(ctx);
-        }
+        doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
 
     dom.handleEvent(textArea, 'input', function() {
@@ -256,16 +267,14 @@ exports.create = function(element) {
         if (textAreaContent != newText) {
             textAreaContent = '';
             textArea.value = '';
-            doc.selection.end += doc.selectedRange().setText(newText);
-            focusChar = doc.selection.start = doc.selection.end;
-            paint();
-            updateTextArea();
+            doc.insert(newText);
         }
     });
 
     var updateTextArea = function() {
         focusChar = focusChar === null ? doc.selection.end : focusChar;
         var endChar = doc.characterByOrdinal(focusChar);
+        focusChar = null;
         if (endChar) {
             var bounds = endChar.bounds();
             textAreaDiv.style.left = bounds.l + 'px';
@@ -290,19 +299,17 @@ exports.create = function(element) {
         }, 10);
     };
 
-    var select = function(start, end) {
-        doc.select(start, end);
+    selectionChanged.push(function() {
         paint();
         if (!selectDragStart) {
             updateTextArea();
         }
-    };
+    });
 
     dom.handleMouseEvent(canvas, 'mousedown', function(ev, x, y) {
         var char = doc.characterByCoordinate(x, y);
         selectDragStart = char.ordinal;
-        focusChar = char.ordinal;
-        select(char.ordinal, char.ordinal);
+        doc.select(char.ordinal, char.ordinal);
     });
 
     var areCharsEqual = function(a, b) {
@@ -317,9 +324,9 @@ exports.create = function(element) {
                 if (hoverChar) {
                     focusChar = hoverChar.ordinal;
                     if (selectDragStart > hoverChar.ordinal) {
-                        select(hoverChar.ordinal, selectDragStart);
+                        doc.select(hoverChar.ordinal, selectDragStart);
                     } else {
-                        select(selectDragStart, hoverChar.ordinal);
+                        doc.select(selectDragStart, hoverChar.ordinal);
                     }
                 }
             }
@@ -370,6 +377,9 @@ exports.create = function(element) {
     update();
 
     return {
+        selectionChanged: function(handler) {
+            selectionChanged.push(handler);
+        },
         document: doc,
         paint: paint,
         load: function(text) {
