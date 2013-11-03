@@ -1,4 +1,7 @@
-require('webmake')('src/carota.js', { output: 'carota-bundle.js' }, function(result) {
+var webmake = require('webmake');
+var minify = require('node-minify');
+
+webmake('src/carota.js', { output: 'carota-debug.js' }, function(result) {
     if (!result) {
         console.log('All good');
     } else {
@@ -6,3 +9,13 @@ require('webmake')('src/carota.js', { output: 'carota-bundle.js' }, function(res
     }
 });
 
+new minify.minify({
+    type: 'uglifyjs',
+    fileIn: 'carota-bundle.js',
+    fileOut: 'carota-min.js',
+    callback: function(err, min){
+        if (err) {
+            console.log(err);
+        }
+    }
+});

@@ -2,7 +2,7 @@
 <html>
 <head>
     <title></title>
-    <script src="carota-bundle.js"></script>
+    <script src="carota-min.js"></script>
     <style>
         #exampleToolbar {
             position: absolute;
@@ -144,7 +144,13 @@
             { text: 'Carota', size: 14, bold: true, color: 'orange' },
             { text: ', a rich text editor implemented in JavaScript ' +
                     'that uses HTML5 Canvas for rendering.'
-            }
+            },
+            { text: '\n\nAt runtime Carota has ' },
+            { text: 'no external dependencies', bold: true },
+            { text: '. You just pull in the carota-min.js ' +
+                    'using the SCRIPT tag and away you go. Or else get node and use:\n\n' },
+            { text: '    npm install carota', font: 'Courier' },
+            { text: '\n\nTo get the full source.' },
         ];
 
         exampleEditor.load(sampleText);

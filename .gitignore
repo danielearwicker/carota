@@ -1,3 +1,4 @@
 .idea/
 node_modules/
-carota-bundle.js
+carota-debug.js
+carota-min.js
