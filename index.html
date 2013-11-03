@@ -113,10 +113,8 @@
             // When the control changes value, update the selected range's formatting
             carota.dom.handleEvent(elem, 'change', function() {
                 var range = exampleEditor.document.selectedRange();
-                var formatting = {};
                 var val = elem.nodeName === 'INPUT' ? elem.checked : elem.value;
-                formatting[id] = val;
-                range.setFormatting(formatting);
+                range.setFormatting(id, val);
                 exampleEditor.paint();
             });
 

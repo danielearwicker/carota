@@ -62,13 +62,20 @@ Range.prototype.getFormatting = function() {
     return per(this.runs, this).reduce(runs.merge).last();
 };
 
-Range.prototype.setFormatting = function(runTemplate) {
-    if (this.start === this.end) {
+Range.prototype.setFormatting = function(attribute, value) {
+    var range = this;
+    if (attribute === 'align') {
+        // Special case: expand selection to surrounding paragraphs
+        range = range.doc.paragraphRange(range.start, range.end);
+    }
+    if (range.start === range.end) {
         // should update a "next insert" default style in the document
     } else {
-        var saved = this.save();
-        runs.format(saved, runTemplate);
-        this.setText(saved);
+        var saved = range.save();
+        var template = {};
+        template[attribute] = value;
+        runs.format(saved, template);
+        range.setText(saved);
     }
 };
 

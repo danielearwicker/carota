@@ -197,9 +197,7 @@ exports.create = function(element) {
         var toggle = toggles[ev.which];
         if (ev.ctrlKey && toggle) {
             var selRange = doc.selectedRange();
-            var format = {};
-            format[toggle] = selRange.getFormatting()[toggle] !== true;
-            selRange.setFormatting(format);
+            selRange.setFormatting(toggle, selRange.getFormatting()[toggle] !== true);
             paint();
             handled = true;
         }

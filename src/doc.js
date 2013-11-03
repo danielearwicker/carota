@@ -43,6 +43,31 @@ var prototype = node.derive({
     selectedRange: function() {
         return this.range(this.selection.start, this.selection.end);
     },
+    paragraphRange: function(start, end) {
+        // find the character after the nearest newline before start
+        var ch = this.characterByOrdinal(start), word;
+        if (ch) {
+            word = ch.word;
+            while (word.ordinal > 0) {
+                var prev = word.previous();
+                if (prev.word.isNewLine()) {
+                    break;
+                }
+                word = prev;
+            }
+            start = word.ordinal;
+        }
+        // find the nearest newline after end
+        ch = this.characterByOrdinal(end);
+        if (ch) {
+            word = ch.word;
+            while (!word.word.isNewLine()) {
+                word = word.next();
+            }
+            end = word.ordinal;
+        }
+        return this.range(start, end);
+    },
     insert: function(text) {
         this.select(this.selection.end + this.selectedRange().setText(text));
     },
@@ -59,14 +84,13 @@ var prototype = node.derive({
             text = [{ text: text }];
         }
 
-        var allWords = this.words;
 
         var startWord = startChar.parent();
-        var startWordIndex = allWords.indexOf(startWord.word);
+        var startWordIndex = this.words.indexOf(startWord.word);
         var startWordChars = wordCharRuns(startWord);
 
         var endWord = endChar.parent();
-        var endWordIndex = endWord === startWord ? startWordIndex : allWords.indexOf(endWord.word);
+        var endWordIndex = endWord === startWord ? startWordIndex : this.words.indexOf(endWord.word);
         var endWordChars = endWord === startWord ? startWordChars : wordCharRuns(endWord);
 
         var prefix;
@@ -105,7 +129,7 @@ var prototype = node.derive({
             })
             .all();
         Array.prototype.splice.apply(
-            allWords, [startWordIndex, (endWordIndex - startWordIndex) + 1].concat(newWords)
+            this.words, [startWordIndex, (endWordIndex - startWordIndex) + 1].concat(newWords)
         );
         this.layout();
 

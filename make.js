@@ -11,7 +11,7 @@ webmake('src/carota.js', { output: 'carota-debug.js' }, function(result) {
 
 new minify.minify({
     type: 'uglifyjs',
-    fileIn: 'carota-bundle.js',
+    fileIn: 'carota-debug.js',
     fileOut: 'carota-min.js',
     callback: function(err, min){
         if (err) {
