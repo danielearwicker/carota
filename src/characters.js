@@ -1,3 +1,5 @@
+var runs = require('./runs');
+
 var compatible = function(a, b) {
     if (a._runs !== b._runs) {
         throw new Error('Characters for different documents');
@@ -17,11 +19,13 @@ var prototype = {
                 var run = self._runs[runIndex];
                 if (run) {
                     var start = (runIndex === self._run) ? self._offset : 0;
-                    var stop = (runIndex === upTo._run) ? upTo._offset : run.text.length;
+                    var stop = (runIndex === upTo._run) ? upTo._offset : runs.getTextLength(run.text);
                     if (start < stop) {
-                        run = Object.create(run);
-                        run.text = run.text.substr(start, stop - start);
-                        eachRun(run);
+                        runs.getSubText(function(piece) {
+                            var pieceRun = Object.create(run);
+                            pieceRun.text = piece;
+                            eachRun(pieceRun);
+                        }, run.text, start, stop - start);
                     }
                 }
             }
@@ -29,31 +33,34 @@ var prototype = {
     }
 };
 
-function character(runs, run, offset) {
+function character(runArray, run, offset) {
     return Object.create(prototype, {
-        _runs: { value: runs },
+        _runs: { value: runArray },
         _run: { value: run },
         _offset: { value: offset },
-        char: { value: run >= runs.length ? null : runs[run].text[offset] }
+        char: {
+            value: run >= runArray.length ? null :
+                runs.getTextChar(runArray[run].text, offset)
+        }
     });
 }
 
-function firstNonEmpty(runs, n) {
-    for (; n < runs.length; n++) {
-        if (runs[n].text.length != 0) {
-            return character(runs, n, 0);
+function firstNonEmpty(runArray, n) {
+    for (; n < runArray.length; n++) {
+        if (runs.getTextLength(runArray[n].text) != 0) {
+            return character(runArray, n, 0);
         }
     }
-    return character(runs, runs.length, 0);
+    return character(runArray, runArray.length, 0);
 }
 
-module.exports = function(runs) {
+module.exports = function(runArray) {
     return function(emit) {
-        var c = firstNonEmpty(runs, 0);
+        var c = firstNonEmpty(runArray, 0);
         while (!emit(c) && (c.char !== null)) {
-            c = (c._offset + 1 < runs[c._run].text.length)
-                ? character(runs, c._run, c._offset + 1)
-                : firstNonEmpty(runs, c._run + 1);
+            c = (c._offset + 1 < runs.getTextLength(runArray[c._run].text))
+                ? character(runArray, c._run, c._offset + 1)
+                : firstNonEmpty(runArray, c._run + 1);
         }
     };
 };

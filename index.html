@@ -2,23 +2,14 @@
 <html>
 <head>
     <title></title>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
-    <script src="lib/jquery-txtinput-1.1.js"></script>
-    <script src="lib/jquery-caret.js"></script>
     <script src="carota-bundle.js"></script>
     <style>
-        .unselectable {
-            -moz-user-select: -moz-none;
-            -khtml-user-select: none;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+        #exampleEditor {
+            border: 1px solid silver;
         }
     </style>
 </head>
 <body>
-    <div><input type="text" id="selectionStart"><input type="text" id="selectionEnd"></div>
-    <div id="carota" style="overflow: auto; width: 520px; height: 500px;">
-    </div>
+    <div id="exampleEditor" style="position: absolute; left: 10px; top: 10px; right: 10px; bottom: 10px;"></div>
 </body>
 </html>

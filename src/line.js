@@ -1,6 +1,7 @@
 var positionedWord = require('./positionedword');
 var rect = require('./rect');
 var node = require('./node');
+var runs = require('./runs');
 
 /*  A Line is returned by the wrap function. It contains an array of PositionedWord objects that are
     all on the same physical line in the wrapped text.
@@ -54,6 +55,14 @@ var prototype = node.derive({
             return pw.plainText();
         }).join('');
     },
+    getFormatting: function() {
+        return this.positionedWords.reduce(runs.merge);
+    },
+    runs: function(emit) {
+        this.positionedWords.forEach(function(word) {
+            word.runs(emit);
+        });
+    },
     parent: function() {
         return this.doc;
     },
@@ -105,7 +114,7 @@ module.exports = function(doc, width, baseline, ascent, descent, words, ordinal)
             x += (word.width + spacing);
             var wordOrdinal = ordinal;
             ordinal += (word.text.length + word.space.length);
-            return positionedWord(word, line, left, wordOrdinal);
+            return positionedWord(word, line, left, wordOrdinal, word.width + spacing);
         })
     });
 

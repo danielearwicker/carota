@@ -1,4 +1,3 @@
-
 var textStyleDefaults = {
     size: 10,
     font: 'Helvetica',
@@ -9,9 +8,9 @@ var textStyleDefaults = {
  */
 var getFontString = exports.getFontString = function(run) {
     return (run && run.italic ? 'italic ' : '') +
-        (run && run.bold ? 'bold ' : '') + ' ' +
-        ((run && run.size) || textStyleDefaults.size) + 'pt ' +
-        ((run && run.font) || textStyleDefaults.font);
+           (run && run.bold ? 'bold ' : '') + ' ' +
+          ((run && run.size) || textStyleDefaults.size) + 'pt ' +
+          ((run && run.font) || textStyleDefaults.font);
 };
 
 /*  Applies the style of a run to the canvas context
@@ -37,33 +36,51 @@ var nbsp = exports.nbsp = String.fromCharCode(160);
 var enter = exports.enter = nbsp; // String.fromCharCode(9166);
 
 /*  Returns width, height, ascent, descent in pixels for the specified text and font.
- The ascent and descent are measured from the baseline.
+    The ascent and descent are measured from the baseline. Note that we add/remove
+    all the DOM elements used for a measurement each time - this is not a significant
+    part of the cost, and if we left the hidden measuring node in the DOM then it
+    would affect the dimensions of the whole page.
  */
-var measureText = exports.measureText = (function() {
+var measureText = exports.measureText = function(text, style) {
     var span, block, div;
-    return function(text, style) {
 
-        if (!div || !div.parents('html').length) {
-            span = $('<span></span>');
-            block = $('<div style="display: inline-block; width: 1px; height: 0px;"></div>');
-            div = $('<div style="visibility: hidden; position: absolute; top: 0; left: 0; width: 500px; height: 200px;"></div>');
-            div.append(span, block);
-            $('body').append(div);
-        }
+    span = document.createElement('span');
+    block = document.createElement('div');
+    div = document.createElement('div');
 
-        span.attr('style', style);
-        span.text(text.replace(/\s/g, nbsp));
+    block.style.display = 'inline-block';
+    block.style.width = '1px';
+    block.style.height = '0';
+
+    div.style.visibility = 'hidden';
+    div.style.position = 'absolute';
+    div.style.top = '0';
+    div.style.left = '0';
+    div.style.width = '500px';
+    div.style.height = '200px';
+
+    div.appendChild(span);
+    div.appendChild(block);
+    document.body.appendChild(div);
+    try {
+        span.setAttribute('style', style);
+
+        span.innerHTML = '';
+        span.appendChild(document.createTextNode(text.replace(/\s/g, nbsp)));
 
         var result = {};
-        block.css({ verticalAlign: 'baseline' });
-        result.ascent = (block.offset().top - span.offset().top);
-        block.css({ verticalAlign: 'bottom' });
-        result.height = (block.offset().top - span.offset().top);
+        block.style.verticalAlign = 'baseline';
+        result.ascent = (block.offsetTop - span.offsetTop);
+        block.style.verticalAlign = 'bottom';
+        result.height = (block.offsetTop - span.offsetTop);
         result.descent = result.height - result.ascent;
-        result.width = span.width();
-        return result;
-    };
-})();
+        result.width = span.offsetWidth;
+    } finally {
+        div.parentNode.removeChild(div);
+        div = null;
+    }
+    return result;
+};
 
 /*  Create a function that works like measureText except it caches every result for every
     unique combination of (text, style) - that is, it memoizes measureText.

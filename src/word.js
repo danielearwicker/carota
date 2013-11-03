@@ -1,6 +1,6 @@
 var per = require('per');
 var part = require('./part');
-var measure = require('./measure');
+var runs = require('./runs');
 
 /*  A Word has the following properties:
 
@@ -32,7 +32,7 @@ var prototype = {
         return this.text.parts.length == 1 && this.text.parts[0].isNewLine;
     },
     draw: function(ctx, x, y) {
-        this.text.parts.forEach(function(part) {
+        per(this.text.parts).concat(this.space.parts).forEach(function(part) {
             part.draw(ctx, x, y);
             x += part.width;
         });
@@ -46,9 +46,11 @@ var prototype = {
     }
 };
 
-var section = function(runs) {
+var section = function(runArray, inlines) {
     var s = {
-        parts: per(runs).map(part).all(),
+        parts: per(runArray).map(function(p) {
+            return part(p, inlines);
+        }).all(),
         ascent: 0,
         descent: 0,
         width: 0,
@@ -59,33 +61,33 @@ var section = function(runs) {
         s.ascent = Math.max(s.ascent, p.ascent);
         s.descent = Math.max(s.descent, p.descent);
         s.width += p.width;
-        s.length += p.run.text.length;
-        s.plainText += p.run.text;
+        s.length += runs.getPieceLength(p.run.text);
+        s.plainText += runs.getPiecePlainText(p.run.text);
     });
     return s;
 };
 
-module.exports = function(coords) {
+module.exports = function(coords, inlines) {
     var text, space;
     if (!coords) {
         // special end-of-document marker, mostly like a newline with no formatting
-        text = [{ text: measure.enter }];
-        return Object.create(prototype, {
-            text: { value: section(text) },
-            space: { value: section([]) },
-            ascent: { value: text.ascent },
-            descent: { value: text.descent },
-            width: { value: text.width },
-            eof: { value: true }
-        });
+        text = [{ text: '\n' }];
+        space = [];
+    } else {
+        text = coords.text.cut(coords.spaces);
+        space = coords.spaces.cut(coords.end);
     }
-    text = section(coords.text.cut(coords.spaces));
-    space = section(coords.spaces.cut(coords.end));
-    return Object.create(prototype, {
+    text = section(text, inlines);
+    space = section(space, inlines);
+    var word = Object.create(prototype, {
         text: { value: text },
         space: { value: space },
         ascent: { value: Math.max(text.ascent, space.ascent) },
         descent: { value: Math.max(text.descent, space.descent) },
-        width: { value: text.width + space.width }
+        width: { value: text.width + space.width, configurable: true }
     });
+    if (!coords) {
+        Object.defineProperty(word, 'eof', { value: true });
+    }
+    return word;
 };

@@ -1,7 +1,11 @@
 
 module.exports = [
     { text: '    Crampton Wick,\n    26th Oct 2013\n\n' },
-    { text: 'Dear sir/madam,\n\nWith reference to your account ' },
+    { text: [
+        'Dear sir/madam,\n\nWith reference ',
+        { thing: 'blue' },
+        'to your account ']
+    },
     { text: 'No. 17598732', bold: true },
     { text: ', it is with the utmost regret that we have to inform you that your contract with us ' +
         'has been '
@@ -9,9 +13,11 @@ module.exports = [
     { text: 'terminated forth', italic: true },
     { text: 'with', italic: true, bold: true },
     { text: '.\n\n    Please find enclosed a portrait of ' },
+    { text: { thing: 'purple' } },
     { text: 'Her Majesty Queen Victoria', size: 24, color: 'red', font: 'Times' },
     { text: ' brushing a gibbon\'s hair.\n\nYours, etc.\n\n' },
     { text: '     Fernando Degroot, Esq.\n     Persistent Undersecretary to His Lordship\n\n' },
+    { text: { unknown: 'dunno' } },
     { text: 'Children are being urged to take back their "wild time", swapping 30 minutes of screen use for outdoor activities.\n' +
         'The call to renew a connection with nature comes from a collaboration of almost 400 organisations, from playgroups to the NHS.\n' +
         'The Wild Network wants children to take up activities like conkers and camping.\n',
@@ -39,3 +45,11 @@ module.exports = [
     }
 ];
 
+/*module.exports = [
+    { text: [
+        'Dear sir/madam,\n\nWith reference ',
+        { thing: 'blue' },
+        'to your account ']
+    }
+];
+  */

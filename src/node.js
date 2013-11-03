@@ -1,3 +1,5 @@
+var per = require('per');
+var runs = require('./runs');
 
 var prototype = {
     children: function() {
@@ -37,6 +39,12 @@ var prototype = {
         }
         var prevParent = parent.previous();
         return !prevParent ? null : prevParent.last();
+    },
+    getFormatting: function() {
+        per(this.runs, this).reduce(runs.merge).last();
+    },
+    save: function() {
+        return per(this.runs, this).per(runs.consolidate()).all();
     }
 };
 

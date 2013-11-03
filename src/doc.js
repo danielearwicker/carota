@@ -6,44 +6,7 @@ var word = require('./word');
 var node = require('./node');
 var runs = require('./runs');
 var measure = require('./measure');
-
-function DocumentRange(doc, start, end) {
-    this.doc = doc;
-    this.start = start;
-    this.end = end;
-}
-
-DocumentRange.prototype.parts = function(emit, list) {
-    list = list || this.doc.lines;
-    var self = this;
-
-    list.some(function(item) {
-        if (item.ordinal + item.length <= self.start) {
-            return false;
-        }
-        if (item.ordinal >= self.end) {
-            return true;
-        }
-        if (item.ordinal >= self.start &&
-            item.ordinal + item.length <= self.end) {
-            emit(item);
-        } else {
-            self.parts(emit, item.children());
-        }
-    });
-};
-
-DocumentRange.prototype.plainText = function() {
-    return per(this.parts, this).map('x.plainText()').all().join('');
-};
-
-DocumentRange.prototype.clear = function() {
-    return this.setText([]);
-};
-
-DocumentRange.prototype.setText = function(text) {
-    return this.doc.splice(this.start, this.end, text);
-};
+var range = require('./range');
 
 var wordCharRuns = function(positionedWord) {
     return positionedWord.children().map(function(char) {
@@ -53,19 +16,29 @@ var wordCharRuns = function(positionedWord) {
 
 var prototype = node.derive({
     load: function(runs) {
-        this.words = per(characters(runs)).per(split()).map(word).all();
+        var self = this;
+        this.words = per(characters(runs)).per(split()).map(function(w) {
+            return word(w, self.inlines);
+        }).all();
         this.layout();
     },
     layout: function() {
         this.lines = per(this.words).per(wrap(this._width, this)).all();
+        var lastLine = this.last();
+        this.height = !lastLine ? 0 : lastLine.baseline + lastLine.descent;
     },
     plainText: function() {
         return this.words.map(function(word) {
             return word.plainText;
         }).join('');
     },
+    runs: function(emit) {
+        this.lines.forEach(function(line) {
+            line.runs(emit);
+        });
+    },
     range: function(start, end) {
-        return new DocumentRange(this, start, end);
+        return range(this, start, end);
     },
     selectedRange: function() {
         return this.range(this.selection.start, this.selection.end);
@@ -106,17 +79,25 @@ var prototype = node.derive({
 
         var suffix;
         if (endChar.ordinal === endWord.ordinal) {
-            suffix = wordCharRuns(endWord);
+            if (endChar.ordinal === this.length()) {
+                suffix = [];
+                endWordIndex--;
+            } else {
+                suffix = wordCharRuns(endWord);
+            }
         } else {
             suffix = endWordChars.slice(endChar.ordinal - endWord.ordinal);
         }
 
+        var self = this;
         var oldLength = this.length();
-        var newRuns = runs.consolidate(prefix.concat(text).concat(suffix));
+        var newRuns = per(prefix).concat(text).concat(suffix).per(runs.consolidate()).all();
         var newWords = per(characters(newRuns))
             .per(split())
             .truthy()
-            .map(word)
+            .map(function(w) {
+                return word(w, self.inlines);
+            })
             .all();
         Array.prototype.splice.apply(
             allWords, [startWordIndex, (endWordIndex - startWordIndex) + 1].concat(newWords)
@@ -142,9 +123,11 @@ var prototype = node.derive({
         return this.lines;
     },
     length: function() {
-        return this.last().last().last().ordinal;
+        var lastLine = this.last();
+        return !lastLine ? 0 : lastLine.last().last().ordinal;
     },
     draw: function(ctx, bottom) {
+        bottom = bottom || Number.MAX_VALUE;
         measure.prepareContext(ctx);
         this.lines.some(function(line) {
             if (line.baseline - line.ascent > bottom) {
@@ -167,13 +150,15 @@ var prototype = node.derive({
     drawSelection: function(ctx) {
         if (this.selection.end === this.selection.start) {
             if (this.caretVisible) {
-                var char = this.characterByOrdinal(this.selection.start),
-                    charBounds = char.bounds(),
-                    lineBounds = char.word.line.bounds(true);
-                ctx.beginPath();
-                ctx.moveTo(charBounds.l, lineBounds.t);
-                ctx.lineTo(charBounds.l, lineBounds.t + lineBounds.h);
-                ctx.stroke();
+                var char = this.characterByOrdinal(this.selection.start);
+                if (char) {
+                    var charBounds = char.bounds(),
+                        lineBounds = char.word.line.bounds(true);
+                    ctx.beginPath();
+                    ctx.moveTo(charBounds.l, lineBounds.t);
+                    ctx.lineTo(charBounds.l, lineBounds.t + lineBounds.h);
+                    ctx.stroke();
+                }
             }
         } else {
             ctx.save();
@@ -250,13 +235,11 @@ var prototype = node.derive({
 exports = module.exports = function() {
     var doc = Object.create(prototype);
     doc._width = 0;
+    doc.height = 0;
     doc.words = [];
     doc.lines = [];
     doc.selection = { start: 0, end: 0 };
     doc.caretVisible = true;
+    doc.inlines = function() {};
     return doc;
-};
-
-exports.areCharsEqual = function(a, b) {
-    return a ? (b && a.ordinal == b.ordinal) : !b;
 };

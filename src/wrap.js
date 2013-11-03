@@ -43,8 +43,7 @@ module.exports = function(width, doc) {
 
     return function(emit, inputWord) {
         if (inputWord.eof) {
-            lineBuffer.push(inputWord);
-            send(emit);
+            store(inputWord, emit);
         } else {
             if (!lineBuffer.length) {
                 store(inputWord, emit);
