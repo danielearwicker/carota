@@ -97,6 +97,21 @@ var prototype = node.derive({
     insert: function(text) {
         this.select(this.selection.end + this.selectedRange().setText(text));
     },
+    modifyInsertFormatting: function(attribute, value) {
+        this.nextInsertFormatting[attribute] = value;
+        this.notifySelectionChanged();
+    },
+    applyInsertFormatting: function(text) {
+        var formatting = this.nextInsertFormatting;
+        var insertFormattingProperties = Object.keys(formatting);
+        if (insertFormattingProperties.length) {
+            text.forEach(function(run) {
+                insertFormattingProperties.forEach(function(property) {
+                    run[property] = formatting[property];
+                });
+            });
+        }
+    },
     splice: function(start, end, text) {
         var startChar = this.characterByOrdinal(start),
             endChar = start === end ? startChar : this.characterByOrdinal(end);
@@ -109,6 +124,8 @@ var prototype = node.derive({
         } else if (!Array.isArray(text)) {
             text = [{ text: text }];
         }
+
+        this.applyInsertFormatting(text);
 
         var startWord = startChar.parent();
         var startWordIndex = this.words.indexOf(startWord.word);
@@ -222,15 +239,7 @@ var prototype = node.derive({
             ctx.restore();
         }
     },
-    select: function(ordinal, ordinalEnd) {
-        this.selection.start = Math.max(0, ordinal);
-        this.selection.end = Math.min(
-            typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
-            this.length()
-        );
-        this.selectionJustChanged = true;
-        this.caretVisible = true;
-
+    notifySelectionChanged: function() {
         // When firing selectionChanged, we pass a function can be used
         // to obtain the formatting, as this highly likely to be needed
         var cachedFormatting = null;
@@ -242,6 +251,20 @@ var prototype = node.derive({
             return cachedFormatting;
         };
         this.selectionChanged.fire(getFormatting);
+    },
+    select: function(ordinal, ordinalEnd, forceEvent) {
+        var oldStart = this.selection.start, oldEnd = this.selection.end;
+        this.selection.start = Math.max(0, ordinal);
+        this.selection.end = Math.min(
+            typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
+            this.length()
+        );
+        this.selectionJustChanged = true;
+        this.caretVisible = true;
+        this.nextInsertFormatting = {};
+        if (this.selection.start != oldStart || this.selection.end != oldEnd) {
+            this.notifySelectionChanged();
+        }
     },
     characterByOrdinal: function(index) {
         var result = null;

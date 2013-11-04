@@ -56,7 +56,9 @@ Range.prototype.getFormatting = function() {
             pos--;
         }
         var ch = this.doc.characterByOrdinal(pos);
-        return Object.create(!ch ? runs.defaultFormatting : ch.part.run);
+        var formatting = Object.create(!ch ? runs.defaultFormatting : ch.part.run);
+        this.doc.applyInsertFormatting([formatting]);
+        return formatting;
     }
     return per(this.runs, this).reduce(runs.merge).last();
 };
@@ -68,7 +70,7 @@ Range.prototype.setFormatting = function(attribute, value) {
         range = range.doc.paragraphRange(range.start, range.end);
     }
     if (range.start === range.end) {
-        // should update a "next insert" default style in the document
+        range.doc.modifyInsertFormatting(attribute, value);
     } else {
         var saved = range.save();
         var template = {};
