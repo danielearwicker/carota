@@ -102,8 +102,8 @@ module.exports = function(doc, width, baseline, ascent, descent, words, ordinal)
             x = (width - actualWidth()) / 2;
             break;
         case 'justify':
-            if (!words[words.length - 1].isNewLine()) {
-                spacing = (width - actualWidth()) / words.length;
+            if (words.length > 1 && !words[words.length - 1].isNewLine()) {
+                spacing = (width - actualWidth()) / (words.length - 1);
             }
             break;
     }
