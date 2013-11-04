@@ -252,8 +252,7 @@ var prototype = node.derive({
         };
         this.selectionChanged.fire(getFormatting);
     },
-    select: function(ordinal, ordinalEnd, forceEvent) {
-        var oldStart = this.selection.start, oldEnd = this.selection.end;
+    select: function(ordinal, ordinalEnd) {
         this.selection.start = Math.max(0, ordinal);
         this.selection.end = Math.min(
             typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
@@ -262,9 +261,13 @@ var prototype = node.derive({
         this.selectionJustChanged = true;
         this.caretVisible = true;
         this.nextInsertFormatting = {};
-        if (this.selection.start != oldStart || this.selection.end != oldEnd) {
-            this.notifySelectionChanged();
-        }
+
+        /*  NB. always fire this even if the positions stayed the same. The
+            event means that the formatting of the selection has changed
+            (which can happen either by moving the selection range or by
+            altering the formatting)
+        */
+        this.notifySelectionChanged();
     },
     characterByOrdinal: function(index) {
         var result = null;
