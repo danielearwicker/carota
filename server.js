@@ -9,7 +9,7 @@ app.get('/carota-debug.js', function(req, res) {
         'Cache-Control': 'no-cache'
     });
 
-    webmake('main.js', { cache: true }, function (err, content) {
+    webmake('src/carota.js', { cache: true }, function (err, content) {
         if (err) {
             res.end('document.write(' + JSON.stringify(err.message) + ');');
         } else {
