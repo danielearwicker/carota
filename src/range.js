@@ -5,6 +5,10 @@ function Range(doc, start, end) {
     this.doc = doc;
     this.start = start;
     this.end = end;
+    if (start > end) {
+        this.start = end;
+        this.end = start;
+    }
 }
 
 Range.prototype.parts = function(emit, list) {
@@ -60,7 +64,7 @@ Range.prototype.getFormatting = function() {
         this.doc.applyInsertFormatting([formatting]);
         return formatting;
     }
-    return per(this.runs, this).reduce(runs.merge).last();
+    return per(this.runs, this).reduce(runs.merge).last() || runs.defaultFormatting;
 };
 
 Range.prototype.setFormatting = function(attribute, value) {

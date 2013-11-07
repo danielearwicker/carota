@@ -51,13 +51,11 @@ exports.create = function(element) {
         83: 'strikeout'
     };
 
-    dom.handleEvent(textArea, 'keydown', function(ev) {
+    var handleKey = function(key, selecting, ctrlKey) {
         var start = doc.selection.start,
             end = doc.selection.end,
             length = doc.length();
 
-        var key = ev.keyCode;
-        var selecting = !!ev.shiftKey;
         var handled = false;
 
         if (!selecting) {
@@ -109,13 +107,13 @@ exports.create = function(element) {
         };
 
         var changingCaret = false;
-        switch (ev.which) {
+        switch (key) {
             case 37: // left arrow
                 if (!selecting && start != end) {
                     ordinal = start;
                 } else {
                     if (ordinal > 0) {
-                        if (ev.ctrlKey) {
+                        if (ctrlKey) {
                             var c = doc.characterByOrdinal(ordinal);
                             if (c.ordinal === c.word.ordinal) {
                                 ordinal = c.word.previous().ordinal;
@@ -135,7 +133,7 @@ exports.create = function(element) {
                     ordinal = end;
                 } else {
                     if (ordinal < length) {
-                        if (ev.ctrlKey) {
+                        if (ctrlKey) {
                             ordinal = doc.characterByOrdinal(ordinal).word.next().ordinal;
                         } else {
                             ordinal++;
@@ -184,26 +182,26 @@ exports.create = function(element) {
                 }
                 break;
             case 90: // Z undo
-                if (ev.ctrlKey) {
+                if (ctrlKey) {
                     handled = true;
                     doc.performUndo();
                 }
                 break;
             case 89: // Y undo
-                if (ev.ctrlKey) {
+                if (ctrlKey) {
                     handled = true;
                     doc.performUndo(true);
                 }
                 break;
             case 65: // A select all
-                if (ev.ctrlKey) {
+                if (ctrlKey) {
                     handled = true;
                     doc.select(0, doc.length());
                 }
                 break;
             case 67: // C - copy to clipboard
             case 88: // X - cut to clipboard
-                if (ev.ctrlKey) {
+                if (ctrlKey) {
                     // Allow standard handling to take place as well
                     richClipboard = doc.selectedRange().save();
                     plainClipboard = doc.selectedRange().plainText();
@@ -211,8 +209,8 @@ exports.create = function(element) {
                 break;
         }
 
-        var toggle = toggles[ev.which];
-        if (ev.ctrlKey && toggle) {
+        var toggle = toggles[key];
+        if (ctrlKey && toggle) {
             var selRange = doc.selectedRange();
             selRange.setFormatting(toggle, selRange.getFormatting()[toggle] !== true);
             paint();
@@ -247,7 +245,11 @@ exports.create = function(element) {
             handled = true;
         }
 
-        if (handled) {
+        return handled;
+    };
+
+    dom.handleEvent(textArea, 'keydown', function(ev) {
+        if (handleKey(ev.keyCode, ev.shiftKey, ev.ctrlKey)) {
             return false;
         }
         console.log(ev.which);
@@ -399,5 +401,6 @@ exports.create = function(element) {
     dom.handleEvent(canvas, 'carotaEditorSharedTimer', update);
     update();
 
+    doc.sendKey = handleKey;
     return doc;
 };
