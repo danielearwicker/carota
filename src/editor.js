@@ -40,7 +40,9 @@ exports.create = function(element) {
         hoverChar,
         selectDragStart = null,
         focusChar = null,
-        textAreaContent = '';
+        textAreaContent = '',
+        richClipboard = null,
+        plainClipboard = null;
 
     var toggles = {
         66: 'bold',
@@ -199,6 +201,14 @@ exports.create = function(element) {
                     doc.select(0, doc.length());
                 }
                 break;
+            case 67: // C - copy to clipboard
+            case 88: // X - cut to clipboard
+                if (ev.ctrlKey) {
+                    // Allow standard handling to take place as well
+                    richClipboard = doc.selectedRange().save();
+                    plainClipboard = doc.selectedRange().plainText();
+                }
+                break;
         }
 
         var toggle = toggles[ev.which];
@@ -272,6 +282,9 @@ exports.create = function(element) {
         if (textAreaContent != newText) {
             textAreaContent = '';
             textArea.value = '';
+            if (newText === plainClipboard) {
+                newText = richClipboard;
+            }
             doc.insert(newText);
         }
     });
