@@ -200,10 +200,14 @@ var prototype = node.derive({
         var lastLine = this.last();
         return !lastLine ? 0 : lastLine.last().last().ordinal;
     },
-    draw: function(ctx, bottom) {
+    draw: function(ctx, top, bottom) {
+        top = top || 0;
         bottom = bottom || Number.MAX_VALUE;
         measure.prepareContext(ctx);
         this.lines.some(function(line) {
+            if (line.baseline + line.descent < top) {
+                return false;
+            }
             if (line.baseline - line.ascent > bottom) {
                 return true;
             }

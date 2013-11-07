@@ -24,15 +24,18 @@ exports.create = function(element) {
     }
 
     element.innerHTML =
-        '<canvas width="100" height="100" class="carotaEditorCanvas"></canvas>' +
-        '<div style="overflow: hidden; position: absolute; height: 0;">' +
+        '<div class="carotaSpacer">' +
+            '<canvas width="100" height="100" class="carotaEditorCanvas" style="position: absolute;"></canvas>' +
+        '</div>' +
+        '<div class="carotaTextArea" style="overflow: hidden; position: absolute; height: 0;">' +
             '<textarea autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="0" ' +
             'style="position: absolute; padding: 0px; width: 1000px; height: 1em; ' +
             'outline: none; font-size: 4px;"></textarea>'
         '</div>';
 
     var canvas = element.querySelector('canvas'),
-        textAreaDiv = element.querySelector('div'),
+        spacer = element.querySelector('.carotaSpacer'),
+        textAreaDiv = element.querySelector('.carotaTextArea'),
         textArea = element.querySelector('textarea'),
         doc = carotaDoc(),
         keyboardSelect = 0,
@@ -262,7 +265,11 @@ exports.create = function(element) {
         }
 
         canvas.width = Math.max(doc.actualWidth, element.clientWidth);
-        canvas.height = Math.max(doc.height, element.clientHeight);
+        canvas.height = element.clientHeight;
+        canvas.style.top = element.scrollTop + 'px';
+        spacer.style.width = canvas.width + 'px';
+        spacer.style.height = Math.max(doc.height, element.clientHeight) + 'px';
+
         if (doc.height < (element.clientHeight - 50) && doc.actualWidth <= element.clientWidth) {
             element.style.overflow = 'hidden';
         } else {
@@ -271,10 +278,12 @@ exports.create = function(element) {
 
         var ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        doc.draw(ctx);
+        ctx.translate(0, -element.scrollTop);
+        doc.draw(ctx, element.scrollTop, element.scrollTop + canvas.height);
         doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
+
+    dom.handleEvent(element, 'scroll', paint);
 
     dom.handleEvent(textArea, 'input', function() {
         var newText = textArea.value;
@@ -332,13 +341,13 @@ exports.create = function(element) {
         }
     });
 
-    dom.handleMouseEvent(canvas, 'mousedown', function(ev, x, y) {
+    dom.handleMouseEvent(spacer, 'mousedown', function(ev, x, y) {
         var char = doc.characterByCoordinate(x, y);
         selectDragStart = char.ordinal;
         doc.select(char.ordinal, char.ordinal);
     });
 
-    dom.handleMouseEvent(canvas, 'dblclick', function(ev, x, y) {
+    dom.handleMouseEvent(spacer, 'dblclick', function(ev, x, y) {
         var char = doc.characterByCoordinate(x, y);
         doc.select(char.word.ordinal, char.word.ordinal + char.word.word.text.length);
     });
@@ -347,7 +356,7 @@ exports.create = function(element) {
         return a ? (b && a.ordinal == b.ordinal) : !b;
     };
 
-    dom.handleMouseEvent(canvas, 'mousemove', function(ev, x, y) {
+    dom.handleMouseEvent(spacer, 'mousemove', function(ev, x, y) {
         if (selectDragStart !== null) {
             var newHoverChar = doc.characterByCoordinate(x, y, true);
             if (!areCharsEqual(hoverChar, newHoverChar)) {
@@ -364,7 +373,7 @@ exports.create = function(element) {
         }
     });
 
-    dom.handleMouseEvent(canvas, 'mouseup', function(ev, x, y) {
+    dom.handleMouseEvent(spacer, 'mouseup', function(ev, x, y) {
         selectDragStart = null;
         keyboardX = null;
         updateTextArea();
