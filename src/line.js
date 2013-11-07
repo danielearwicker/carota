@@ -86,26 +86,27 @@ module.exports = function(doc, width, baseline, ascent, descent, words, ordinal)
         align: { value: align }
     });
 
-    var x = 0, spacing = 0, actualWidth = function() {
-        var total = 0;
-        words.forEach(function(word) {
-            total += word.width;
-        });
-        return total - words[words.length - 1].space.width;
-    };
+    var actualWidth = 0;
+    words.forEach(function(word) {
+        actualWidth += word.width;
+    });
+    actualWidth -= words[words.length - 1].space.width;
 
-    switch (align) {
-        case 'right':
-            x = width - actualWidth();
-            break;
-        case 'center':
-            x = (width - actualWidth()) / 2;
-            break;
-        case 'justify':
-            if (words.length > 1 && !words[words.length - 1].isNewLine()) {
-                spacing = (width - actualWidth()) / (words.length - 1);
-            }
-            break;
+    var x = 0, spacing = 0;
+    if (actualWidth < width) {
+        switch (align) {
+            case 'right':
+                x = width - actualWidth;
+                break;
+            case 'center':
+                x = (width - actualWidth) / 2;
+                break;
+            case 'justify':
+                if (words.length > 1 && !words[words.length - 1].isNewLine()) {
+                    spacing = (width - actualWidth) / (words.length - 1);
+                }
+                break;
+        }
     }
 
     Object.defineProperty(line, 'positionedWords', {
@@ -118,6 +119,7 @@ module.exports = function(doc, width, baseline, ascent, descent, words, ordinal)
         })
     });
 
+    Object.defineProperty(line, 'actualWidth', { value: actualWidth });
     Object.defineProperty(line, 'length', { value: ordinal - line.ordinal });
     return line;
 };

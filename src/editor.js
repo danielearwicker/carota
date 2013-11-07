@@ -261,15 +261,12 @@ exports.create = function(element) {
             doc.width(element.clientWidth);
         }
 
-        canvas.width = element.clientWidth;
+        canvas.width = Math.max(doc.actualWidth, element.clientWidth);
         canvas.height = Math.max(doc.height, element.clientHeight);
-        if (doc.height < element.clientHeight) {
+        if (doc.height < (element.clientHeight - 50) && doc.actualWidth <= element.clientWidth) {
             element.style.overflow = 'hidden';
         } else {
             element.style.overflow = 'auto';
-        }
-        if (element.clientWidth < canvas.width) {
-            doc.width(element.clientWidth);
         }
 
         var ctx = canvas.getContext('2d');
@@ -308,6 +305,15 @@ exports.create = function(element) {
             var scrollUpBy = Math.max(0, element.scrollTop - bounds.t);
             if (scrollUpBy) {
                 element.scrollTop -= scrollUpBy;
+            }
+            var scrollRightBy = Math.max(0, bounds.l -
+                (element.scrollLeft + element.clientWidth));
+            if (scrollRightBy) {
+                element.scrollLeft += scrollRightBy;
+            }
+            var scrollLeftBy = Math.max(0, element.scrollLeft - bounds.l);
+            if (scrollLeftBy) {
+                element.scrollLeft -= scrollLeftBy;
             }
         }
         textAreaContent = doc.selectedRange().plainText();

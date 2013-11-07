@@ -46,6 +46,11 @@ var prototype = node.derive({
         this.lines = per(this.words).per(wrap(this._width, this)).all();
         var lastLine = this.last();
         this.height = !lastLine ? 0 : lastLine.baseline + lastLine.descent;
+        this.actualWidth = 0;
+        var self = this;
+        this.lines.forEach(function(line) {
+            self.actualWidth = Math.max(self.actualWidth, line.actualWidth);
+        });
     },
     plainText: function() {
         return this.words.map(function(word) {
