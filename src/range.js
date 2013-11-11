@@ -12,7 +12,7 @@ function Range(doc, start, end) {
 }
 
 Range.prototype.parts = function(emit, list) {
-    list = list || this.doc.lines;
+    list = list || this.doc.children();
     var self = this;
 
     list.some(function(item) {
@@ -31,10 +31,6 @@ Range.prototype.parts = function(emit, list) {
     });
 };
 
-Range.prototype.plainText = function() {
-    return per(this.parts, this).map('x.plainText()').all().join('');
-};
-
 Range.prototype.clear = function() {
     return this.setText([]);
 };
@@ -44,7 +40,11 @@ Range.prototype.setText = function(text) {
 };
 
 Range.prototype.runs = function(emit) {
-    this.parts(function(part) { part.runs(emit); });
+    this.doc.runs(emit, this);
+};
+
+Range.prototype.plainText = function() {
+    return per(this.runs, this).map(runs.getPlainText).all().join('');
 };
 
 Range.prototype.save = function() {
@@ -52,19 +52,18 @@ Range.prototype.save = function() {
 };
 
 Range.prototype.getFormatting = function() {
-    if (this.start === this.end) {
-        var pos = this.start;
+    var range = this;
+    if (range.start === range.end) {
+        var pos = range.start;
         // take formatting of character before, if any, because that's
         // where plain text picks up formatting when inserted
         if (pos > 0) {
             pos--;
         }
-        var ch = this.doc.characterByOrdinal(pos);
-        var formatting = Object.create(!ch ? runs.defaultFormatting : ch.part.run);
-        this.doc.applyInsertFormatting([formatting]);
-        return formatting;
+        range.start = pos;
+        range.end = pos + 1;
     }
-    return per(this.runs, this).reduce(runs.merge).last() || runs.defaultFormatting;
+    return per(range.runs, range).reduce(runs.merge).last() || runs.defaultFormatting;
 };
 
 Range.prototype.setFormatting = function(attribute, value) {

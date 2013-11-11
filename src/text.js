@@ -135,3 +135,27 @@ var createCachedMeasureText = exports.createCachedMeasureText = function() {
 };
 
 exports.cachedMeasureText = createCachedMeasureText();
+
+exports.measure = function(str, formatting) {
+    return exports.cachedMeasureText(str, exports.getRunStyle(formatting));
+};
+
+exports.draw = function(ctx, str, formatting, left, baseline, width, ascent, descent) {
+    exports.prepareContext(ctx);
+    exports.applyRunStyle(ctx, formatting);
+    switch (formatting.script) {
+        case 'super':
+            baseline -= (ascent * (1/3));
+            break;
+        case 'sub':
+            baseline += (descent / 2);
+            break;
+    }
+    ctx.fillText(str === '\n' ? exports.enter : str, left, baseline);
+    if (formatting.underline) {
+        ctx.fillRect(left, 1 + baseline, width, 1);
+    }
+    if (formatting.strikeout) {
+        ctx.fillRect(left, 1 + baseline - (ascent/2), width, 1);
+    }
+};

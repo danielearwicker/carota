@@ -14,3 +14,11 @@ exports.event = function() {
 
     return subscribe;
 };
+
+exports.derive = function(prototype, methods) {
+    var properties = {};
+    Object.keys(methods).forEach(function(name) {
+        properties[name] = { value: methods[name] };
+    });
+    return Object.create(prototype, properties);
+};

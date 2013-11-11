@@ -13,7 +13,7 @@
     after" a word - even if that word happens to be zero characters long!
  */
 
-module.exports = function() {
+module.exports = function(codes) {
 
     var word = null, trailingSpaces = null, newLine = true;
 
@@ -27,20 +27,28 @@ module.exports = function() {
                 endOfWord = true;
                 newLine = false;
             }
-            switch (inputChar.char) {
-                case ' ':
-                    if (!trailingSpaces) {
-                        trailingSpaces = inputChar;
-                    }
-                    break;
-                case '\n':
+            if (typeof inputChar.char === 'string') {
+	            switch (inputChar.char) {
+	                case ' ':
+	                    if (!trailingSpaces) {
+	                        trailingSpaces = inputChar;
+	                    }
+	                    break;
+	                case '\n':
+	                    endOfWord = true;
+	                    newLine = true;
+	                    break;
+	                default:
+	                    if (trailingSpaces) {
+	                        endOfWord = true;
+	                    }
+                }
+            } else {
+                var code = codes(inputChar.char);
+                if (code.block || code.eof) {
                     endOfWord = true;
                     newLine = true;
-                    break;
-                default:
-                    if (trailingSpaces) {
-                        endOfWord = true;
-                    }
+                } 
             }
         }
         if (endOfWord) {

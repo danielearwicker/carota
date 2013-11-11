@@ -1,15 +1,12 @@
-var per = require('per');
 var rect = require('./rect');
 var part = require('./part');
-var measure = require('./measure');
+var text = require('./text');
 var node = require('./node');
-var split = require('./split');
 var word = require('./word');
 var runs = require('./runs');
-var characters = require('./characters');
 
 var newLineWidth = function(run) {
-    return measure.cachedMeasureText(measure.enter, measure.getFontString(run)).width;
+    return text.measure(text.enter, run).width;
 };
 
 var positionedChar = node.derive({
@@ -20,14 +17,17 @@ var positionedChar = node.derive({
             : this.width || this.part.width;
         return rect(wb.l + this.left, wb.t, width, wb.h);
     },
-    plainText: function() {
-        return this.part.run.text;
-    },
-    runs: function(emit) {
-        emit(this.part.run);
-    },
     parent: function() {
         return this.word;
+    },
+    byOrdinal: function() {
+        return this;
+    },
+    byCoordinate: function(x, y) {
+        if (x <= this.bounds().center().x) {
+            return this;
+        }
+        return this.next();
     },
     type: 'character'
 });
@@ -45,7 +45,7 @@ var positionedChar = node.derive({
  */
 var prototype = node.derive({
     draw: function(ctx) {
-        this.word.draw(ctx, this.left, this.line.baseline);
+        this.word.draw(ctx, this.line.left + this.left, this.line.baseline);
 
         // Handy for showing how word boundaries work
         // var b = this.bounds();
@@ -53,7 +53,7 @@ var prototype = node.derive({
     },
     bounds: function() {
         return rect(
-            this.left,
+            this.line.left + this.left,
             this.line.baseline - this.line.ascent,
             this.word.isNewLine() ? newLineWidth(this.word.run) : this.width,
             this.line.ascent + this.line.descent);
@@ -62,26 +62,16 @@ var prototype = node.derive({
         this.word.text.parts.some(eachPart) ||
         this.word.space.parts.some(eachPart);
     },
-    characterByOrdinal: function(index) {
-        if (index >= this.ordinal && index < this.ordinal + this.length) {
-            return this.children()[index - this.ordinal];
-        }
-    },
-    runs: function(emit) {
-        this.parts(function(part) {
-            emit(part.run);
-        });
-    },
     realiseCharacters: function() {
         if (!this._characters) {
             var cache = [];
             var x = 0, self = this, ordinal = this.ordinal,
-                inlines = this.line.doc.inlines;
+                codes = this.parentOfType('document').codes;
             this.parts(function(wordPart) {
                 runs.pieceCharacters(function(char) {
                     var charRun = Object.create(wordPart.run);
                     charRun.text = char;
-                    var p = part(charRun, inlines);
+                    var p = part(charRun, codes);
                     cache.push(Object.create(positionedChar, {
                         left: { value: x },
                         part: { value: p },
@@ -99,6 +89,9 @@ var prototype = node.derive({
             if (lastChar) {
                 Object.defineProperty(lastChar, 'width',
                     { value: this.width - lastChar.left });
+                if (this.word.isNewLine() || (this.word.code() && this.word.code().eof)) {
+                    Object.defineProperty(lastChar, 'newLine', { value: true });
+                }
             }
             this._characters = cache;
         }
@@ -107,9 +100,6 @@ var prototype = node.derive({
         this.realiseCharacters();
         return this._characters;
     },
-    plainText: function() {
-        return this.word.plainText();
-    },
     parent: function() {
         return this.line;
     },
@@ -117,7 +107,7 @@ var prototype = node.derive({
 });
 
 module.exports = function(word, line, left, ordinal, width) {
-    return Object.create(prototype, {
+    var pword = Object.create(prototype, {
         word: { value: word },
         line: { value: line },
         left: { value: left },
@@ -125,4 +115,5 @@ module.exports = function(word, line, left, ordinal, width) {
         ordinal: { value: ordinal },
         length: { value: word.text.length + word.space.length }
     });
+    return pword;
 };

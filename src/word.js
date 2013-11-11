@@ -31,6 +31,12 @@ var prototype = {
     isNewLine: function() {
         return this.text.parts.length == 1 && this.text.parts[0].isNewLine;
     },
+    code: function() {
+        return this.text.parts.length == 1 && this.text.parts[0].code;
+    },
+    codeFormatting: function() {
+        return this.text.parts.length == 1 && this.text.parts[0].run;
+    },
     draw: function(ctx, x, y) {
         per(this.text.parts).concat(this.space.parts).forEach(function(part) {
             part.draw(ctx, x, y);
@@ -43,13 +49,49 @@ var prototype = {
     align: function() {
         var first = this.text.parts[0];
         return first ? first.run.align : 'left';
+    },
+    runs: function(emit, range) {
+        var start = range && range.start || 0,
+            end = range && range.end;
+        if (typeof end !== 'number') {
+            end = Number.MAX_VALUE;
+        }
+        [this.text, this.space].forEach(function(section) {
+            section.parts.some(function(part) {
+                if (start >= end || end <= 0) {
+                    return true;
+                }
+                var run = part.run, text = run.text;
+                if (typeof text === 'string') {
+                    if (start <= 0 && end >= text.length) {
+                        emit(run);
+                    } else if (start < text.length) {
+                        var pieceRun = Object.create(run);
+                        var firstChar = Math.max(0, start);
+                        pieceRun.text = text.substr(
+                            firstChar,
+                            Math.min(text.length, end - firstChar)
+                        );
+                        emit(pieceRun);
+                    }
+                    start -= text.length;
+                    end -= text.length;
+                } else {
+                    if (start <= 0 && end >= 1) {
+                        emit(run);
+                    }
+                    start--;
+                    end--;
+                }
+            });
+        });
     }
 };
 
-var section = function(runArray, inlines) {
+var section = function(runEmitter, codes) {
     var s = {
-        parts: per(runArray).map(function(p) {
-            return part(p, inlines);
+        parts: per(runEmitter).map(function(p) {
+            return part(p, codes);
         }).all(),
         ascent: 0,
         descent: 0,
@@ -67,7 +109,7 @@ var section = function(runArray, inlines) {
     return s;
 };
 
-module.exports = function(coords, inlines) {
+module.exports = function(coords, codes) {
     var text, space;
     if (!coords) {
         // special end-of-document marker, mostly like a newline with no formatting
@@ -77,14 +119,15 @@ module.exports = function(coords, inlines) {
         text = coords.text.cut(coords.spaces);
         space = coords.spaces.cut(coords.end);
     }
-    text = section(text, inlines);
-    space = section(space, inlines);
+    text = section(text, codes);
+    space = section(space, codes);
     var word = Object.create(prototype, {
         text: { value: text },
         space: { value: space },
         ascent: { value: Math.max(text.ascent, space.ascent) },
         descent: { value: Math.max(text.descent, space.descent) },
-        width: { value: text.width + space.width, configurable: true }
+        width: { value: text.width + space.width, configurable: true },
+        length: { value: text.length + space.length }
     });
     if (!coords) {
         Object.defineProperty(word, 'eof', { value: true });

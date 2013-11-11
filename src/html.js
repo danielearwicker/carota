@@ -1,5 +1,4 @@
 var runs = require('./runs');
-var measure = require('./measure');
 var per = require('per');
 
 var tag = function(name, formattingProperty) {

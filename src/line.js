@@ -19,11 +19,6 @@ var runs = require('./runs');
  */
 
 var prototype = node.derive({
-    draw: function(ctx) {
-        this.positionedWords.forEach(function(word) {
-            word.draw(ctx);
-        });
-    },
     bounds: function(minimal) {
         if (minimal) {
             var firstWord = this.first().bounds(),
@@ -31,37 +26,11 @@ var prototype = node.derive({
             return rect(
                 firstWord.l,
                 this.baseline - this.ascent,
-                lastWord.l + lastWord.w,
+                (lastWord.l + lastWord.w) - firstWord.l,
                 this.ascent + this.descent);
         }
-        return rect(0, this.baseline - this.ascent,
+        return rect(this.left, this.baseline - this.ascent,
             this.width, this.ascent + this.descent);
-    },
-    characterByOrdinal: function(index) {
-        if (index >= this.ordinal && index < this.ordinal + this.length) {
-            var result = null;
-            if (this.positionedWords.some(function(word) {
-                result = word.characterByOrdinal(index);
-                if (result) {
-                    return true;
-                }
-            })) {
-                return result;
-            }
-        }
-    },
-    plainText: function() {
-        return this.positionedWords.map(function(pw) {
-            return pw.plainText();
-        }).join('');
-    },
-    getFormatting: function() {
-        return this.positionedWords.reduce(runs.merge);
-    },
-    runs: function(emit) {
-        this.positionedWords.forEach(function(word) {
-            word.runs(emit);
-        });
     },
     parent: function() {
         return this.doc;
@@ -72,12 +41,13 @@ var prototype = node.derive({
     type: 'line'
 });
 
-module.exports = function(doc, width, baseline, ascent, descent, words, ordinal) {
+module.exports = function(doc, left, width, baseline, ascent, descent, words, ordinal) {
 
     var align = words[0].align();
 
     var line = Object.create(prototype, {
-        doc: { value: doc },
+        doc: { value: doc }, // should be called frame, or else switch to using parent on all nodes
+        left: { value: left },
         width: { value: width },
         baseline: { value: baseline },
         ascent: { value: ascent },
@@ -111,11 +81,11 @@ module.exports = function(doc, width, baseline, ascent, descent, words, ordinal)
 
     Object.defineProperty(line, 'positionedWords', {
         value: words.map(function(word) {
-            var left = x;
+            var wordLeft = x;
             x += (word.width + spacing);
             var wordOrdinal = ordinal;
             ordinal += (word.text.length + word.space.length);
-            return positionedWord(word, line, left, wordOrdinal, word.width + spacing);
+            return positionedWord(word, line, wordLeft, wordOrdinal, word.width + spacing);
         })
     });
 

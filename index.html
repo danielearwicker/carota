@@ -41,9 +41,15 @@
             top: 0;
             right: 10px;
             bottom: 0;
+            overflow: hidden;
+        }
+
+        #examplePersistence textarea {
+            width: 99%;
+            height: 99%;
+            border: none;
             background: rgb(30, 30, 30);
             color: rgb(0, 200, 20);
-            overflow: auto;
         }
 
         #pageLinks {
@@ -121,7 +127,7 @@
 
     <div id="examplePersistence">
         <div>
-            <pre></pre>
+            <textarea></textarea>
         </div>
     </div>
 
@@ -293,16 +299,13 @@
 
         // Set up our custom inline - a smiley emoji
         var smiley = document.querySelector('#smiley img');
-        var defaultInlines = exampleEditor.inlines;
-        exampleEditor.inlines = function(obj) {
+
+        exampleEditor.customCodes = function(obj) {
             if (obj.smiley) {
                 // Must return an object that encapsulates the inline
                 return {
                     // measure: must return width, ascent and descent
-                    measure: function(/*measureText*/) {
-                        // The measureText parameter can optionally be used to
-                        // get width/ascent/descent for a string of text in the
-                        // current font (inlines can be formatted as usual).
+                    measure: function(/*formatting*/) {
                         return {
                             width: 24,
                             ascent: 24,
@@ -310,14 +313,11 @@
                         };
                     },
                     // draw: implements the appearance of the inline on canvas
-                    draw: function(ctx, x, y, width, ascent, descent) {
+                    draw: function(ctx, x, y, width, ascent, descent, formatting) {
                         ctx.drawImage(smiley, x, y - ascent, width, ascent);
                     }
                 }
             }
-
-            // Call the default in case there are built-in ones
-            return defaultInlines(obj);
         };
 
         // Setting up the button so user can insert a smiley
@@ -373,6 +373,7 @@
 
         // We don't update the JSON view until half a second after the last change
         // to avoid slowing things down too much
+        var persistenceTextArea = document.querySelector('#examplePersistence textarea');
         var updateTimer = null;
         var updatePersistenceView = function() {
             if (updateTimer !== null) {
@@ -380,16 +381,28 @@
             }
             updateTimer = setTimeout(function() {
                 updateTimer = null;
-                carota.dom.setText(
-                    document.querySelector('#examplePersistence pre'),
-                    JSON.stringify(exampleEditor.save(), null, 4));
+                persistenceTextArea.value = JSON.stringify(exampleEditor.save(), null, 4);
             }, 500);
         };
+
+        var manuallyChangingJson = 0;
+        carota.dom.handleEvent(persistenceTextArea, 'input', function() {
+            try {
+                manuallyChangingJson++;
+                exampleEditor.load(JSON.parse(persistenceTextArea.value), false);
+            } catch (x)  {
+                // ignore if syntax errors
+            } finally {
+                manuallyChangingJson--;
+            }
+        });
 
         // Whenever the document changes, re-display the JSON format and update undo buttons
         exampleEditor.contentChanged(function() {
             updateUndo();
-            updatePersistenceView();
+            if (!manuallyChangingJson) {
+                updatePersistenceView();
+            }
         });
 
         // Load one of the hidden chunks of HTML
@@ -419,6 +432,16 @@
         }
 
         load('#welcome');
+        /*exampleEditor.load([
+            { text: 'A' },
+            { text: { $: 'listStart' }, color: 'blue' },
+            { text: 'B' },
+            { text: { $: 'listNext' }, color: 'red' },
+            { text: 'C' },
+            { text: { $: 'listEnd' } },
+            { text: 'D' }
+        ]);
+          */
     };
     </script>
 </body>

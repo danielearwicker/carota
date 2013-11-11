@@ -1,16 +1,20 @@
-var measure = require('./measure');
+var text = require('./text');
 
 var defaultInline = {
-    measure: function() {
+    measure: function(formatting) {
+        var text = text.measure('?', formatting);
         return {
-            width: 20,
-            ascent: 20,
-            descent: 0
+            width: text.width + 4,
+            ascent: text.width + 2,
+            descent: text.width + 2
         };
     },
     draw: function(ctx, x, y, width, ascent, descent) {
         ctx.fillStyle = 'silver';
         ctx.fillRect(x, y - ascent, width, ascent + descent);
+        ctx.strokeRect(x, y - ascent, width, ascent + descent);
+        ctx.fillStyle = 'black';
+        ctx.fillText('?', x + 2, y);
     }
 };
 
@@ -35,44 +39,27 @@ var defaultInline = {
  */
 var prototype = {
     draw: function(ctx, x, y) {
-        measure.applyRunStyle(ctx, this.run);
         if (typeof this.run.text === 'string') {
-            switch (this.run.script) {
-                case 'super':
-                    y -= (this.ascent * (1/3));
-                    break;
-                case 'sub':
-                    y += (this.descent / 2);
-                    break;
-            }
-            ctx.fillText(this.isNewLine ? measure.enter : this.run.text, x, y);
-            if (this.run.underline) {
-                ctx.fillRect(x, 1 + y, this.width, 1);
-            }
-            if (this.run.strikeout) {
-                ctx.fillRect(x, 1 + y - (this.ascent/2), this.width, 1);
-            }
-        } else if (this.inline) {
+            text.draw(ctx, this.run.text, this.run, x, y, this.width, this.ascent, this.descent);
+        } else if (this.code && this.code.draw) {
             ctx.save();
-            this.inline.draw(ctx, x, y, this.width, this.ascent, this.descent);
+            this.code.draw(ctx, x, y, this.width, this.ascent, this.descent, this.run);
             ctx.restore();
         }
     }
 };
 
-module.exports = function(run, inlines) {
+module.exports = function(run, codes) {
 
-    var m, isNewLine, inline;
+    var m, isNewLine, code;
     if (typeof run.text === 'string') {
         isNewLine = (run.text.length === 1) && (run.text[0] === '\n');
-        m = measure.cachedMeasureText(
-                isNewLine ? measure.nbsp : run.text,
-                measure.getRunStyle(run));
+        m = text.measure(isNewLine ? text.nbsp : run.text, run);
     } else {
-        inline = inlines(run.text) || defaultInline;
-        m = inline.measure(function(str) {
-            return measure.cachedMeasureText(str, measure.getRunStyle(run));
-        });
+        code = codes(run.text) || defaultInline;
+        m = code.measure ? code.measure(run) : {
+            width: 0, ascent: 0, descent: 0
+        };
     }
 
     var part = Object.create(prototype, {
@@ -82,8 +69,8 @@ module.exports = function(run, inlines) {
         ascent: { value: m.ascent },
         descent: { value: m.descent }
     });
-    if (inline) {
-        Object.defineProperty(part, 'inline', { value: inline });
+    if (code) {
+        Object.defineProperty(part, 'code', { value: code });
     }
     return part;
 };

@@ -79,6 +79,20 @@ exports.consolidate = function() {
     };
 };
 
+exports.getPlainText = function(run) {
+    if (typeof run.text === 'string') {
+        return run.text;
+    }
+    if (Array.isArray(run.text)) {
+        var str = [];
+        run.text.forEach(function(piece) {
+            str.push(exports.getPiecePlainText(piece));
+        });
+        return str.join('');
+    }
+    return '_';
+};
+
 /*  The text property of a run can be an ordinary string, or a "character object",
  or it can be an array containing strings and "character objects".
 

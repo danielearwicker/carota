@@ -5,13 +5,11 @@ var prototype = {
             y >= this.t && y < (this.t + this.h);
 
     },
-    drawPath: function(ctx) {
-        ctx.beginPath();
-        ctx.moveTo(this.l, this.t);
-        ctx.lineTo(this.l + this.w, this.t);
-        ctx.lineTo(this.l + this.w, this.t + this.h);
-        ctx.lineTo(this.l, this.t + this.h);
-        ctx.closePath();
+    stroke: function(ctx) {
+        ctx.strokeRect(this.l, this.t, this.w, this.h);
+    },
+    fill: function(ctx) {
+        ctx.fillRect(this.l, this.t, this.w, this.h);
     },
     offset: function(x, y) {
         return rect(this.l + x, this.t + y, this.w, this.h);
@@ -19,6 +17,9 @@ var prototype = {
     equals: function(other) {
         return this.l === other.l && this.t === other.t &&
                this.w === other.w && this.h === other.h;
+    },
+    center: function() {
+        return { x: this.l + this.w/2, y: this.t + this.h/2 };
     }
 };
 
@@ -27,6 +28,8 @@ var rect = module.exports = function(l, t, w, h) {
         l: { value: l },
         t: { value: t },
         w: { value: w },
-        h: { value: h }
+        h: { value: h },
+        r: { value: l + w },
+        b: { value: t + h }
     });
 };

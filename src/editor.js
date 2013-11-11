@@ -1,6 +1,7 @@
 var per = require('per');
 var carotaDoc = require('./doc');
 var dom = require('./dom');
+var rect = require('./rect');
 
 setInterval(function() {
     var editors = document.querySelectorAll('.carotaEditorCanvas');
@@ -39,8 +40,7 @@ exports.create = function(element) {
         textArea = element.querySelector('textarea'),
         doc = carotaDoc(),
         keyboardSelect = 0,
-        keyboardX = null,
-        hoverChar,
+        keyboardX = null, nextKeyboardX = null,
         selectDragStart = null,
         focusChar = null,
         textAreaContent = '',
@@ -54,12 +54,66 @@ exports.create = function(element) {
         83: 'strikeout'
     };
 
+    var exhausted = function(ordinal, direction) {
+        return direction < 0 ? ordinal <= 0 : ordinal >= doc.frame.length - 1;
+    };
+
+    var differentLine = function(caret1, caret2) {
+        return (caret1.b <= caret2.t) ||
+               (caret2.b <= caret1.t);
+    };
+
+    var changeLine = function(ordinal, direction) {
+
+        var originalCaret = doc.getCaretCoords(ordinal), newCaret;
+        nextKeyboardX = (keyboardX !== null) ? keyboardX : originalCaret.l;
+
+        while (!exhausted(ordinal, direction)) {
+            ordinal += direction;
+            newCaret = doc.getCaretCoords(ordinal);
+            if (differentLine(newCaret, originalCaret)) {
+                break;
+            }
+        }
+
+        originalCaret = newCaret;
+        while (!exhausted(ordinal, direction)) {
+            if ((direction > 0 && newCaret.l >= nextKeyboardX) ||
+                (direction < 0 && newCaret.l <= nextKeyboardX)) {
+                break;
+            }
+
+            ordinal += direction;
+            newCaret = doc.getCaretCoords(ordinal);
+            if (differentLine(newCaret, originalCaret)) {
+                ordinal -= direction;
+                break;
+            }
+        }
+
+        return ordinal;
+    };
+
+    var endOfline = function(ordinal, direction) {
+        var originalCaret = doc.getCaretCoords(ordinal), newCaret;
+        while (!exhausted(ordinal, direction)) {
+            ordinal += direction;
+            newCaret = doc.getCaretCoords(ordinal);
+            if (differentLine(newCaret, originalCaret)) {
+                ordinal -= direction;
+                break;
+            }
+        }
+        return ordinal;
+    };
+
     var handleKey = function(key, selecting, ctrlKey) {
         var start = doc.selection.start,
             end = doc.selection.end,
-            length = doc.length();
+            length = doc.frame.length - 1,
+            handled = false;
 
-        var handled = false;
+        nextKeyboardX = null;
 
         if (!selecting) {
             keyboardSelect = 0;
@@ -82,33 +136,6 @@ exports.create = function(element) {
 
         var ordinal = keyboardSelect === 1 ? end : start;
 
-        var changeLine = function(direction, limit) {
-            var char = doc.characterByOrdinal(ordinal);
-            if (char) {
-                if (keyboardX === null) {
-                    var charBounds = char.bounds();
-                    keyboardX = charBounds.l + (charBounds.w / 2);
-                }
-                keyboardX = Math.min(Math.max(keyboardX, 0), doc.width() - 1);
-
-                var nextLine = char.parent().parent()[direction]();
-                if (!nextLine) {
-                    ordinal = limit;
-                } else {
-                    var lineBounds = nextLine.bounds();
-                    var y = lineBounds.t + (lineBounds.h / 2);
-                    var hit = doc.characterByCoordinate(keyboardX, y);
-                    if (hit) {
-                        if (ordinal === hit.ordinal) {
-                            ordinal += (direction === 'next' ? 1 : -1);
-                        } else {
-                            ordinal = hit.ordinal;
-                        }
-                    }
-                }
-            }
-        };
-
         var changingCaret = false;
         switch (key) {
             case 37: // left arrow
@@ -117,18 +144,17 @@ exports.create = function(element) {
                 } else {
                     if (ordinal > 0) {
                         if (ctrlKey) {
-                            var c = doc.characterByOrdinal(ordinal);
-                            if (c.ordinal === c.word.ordinal) {
-                                ordinal = c.word.previous().ordinal;
+                            var wordInfo = doc.wordContainingOrdinal(ordinal);
+                            if (wordInfo.ordinal === ordinal) {
+                                ordinal = wordInfo.index > 0 ? doc.wordOrdinal(wordInfo.index - 1) : 0;
                             } else {
-                                ordinal = c.word.ordinal;
+                                ordinal = wordInfo.ordinal;
                             }
                         } else {
                             ordinal--;
                         }
                     }
                 }
-                keyboardX = null;
                 changingCaret = true;
                 break;
             case 39: // right arrow
@@ -137,29 +163,29 @@ exports.create = function(element) {
                 } else {
                     if (ordinal < length) {
                         if (ctrlKey) {
-                            ordinal = doc.characterByOrdinal(ordinal).word.next().ordinal;
+                            var wordInfo = doc.wordContainingOrdinal(ordinal);
+                            ordinal = wordInfo.ordinal + wordInfo.word.length;
                         } else {
                             ordinal++;
                         }
                     }
                 }
-                keyboardX = null;
                 changingCaret = true;
                 break;
             case 40: // down arrow - find character below
-                changeLine('next', length);
+                ordinal = changeLine(ordinal, 1);
                 changingCaret = true;
                 break;
             case 38: // up - find character above
-                changeLine('previous', 0);
+                ordinal = changeLine(ordinal, -1);
                 changingCaret = true;
                 break;
             case 36: // start of line
-                ordinal = doc.characterByOrdinal(ordinal).word.line.ordinal;
+                ordinal = endOfline(ordinal, -1);
                 changingCaret = true;
                 break;
             case 35: // end of line
-                ordinal = doc.characterByOrdinal(ordinal).word.line.last().last().ordinal;
+                ordinal = endOfline(ordinal, 1);
                 changingCaret = true;
                 break;
             case 33: // page up
@@ -167,7 +193,7 @@ exports.create = function(element) {
                 changingCaret = true;
                 break;
             case 34: // page down
-                ordinal = doc.length();
+                ordinal = length;
                 changingCaret = true;
                 break;
             case 8: // backspace
@@ -199,7 +225,7 @@ exports.create = function(element) {
             case 65: // A select all
                 if (ctrlKey) {
                     handled = true;
-                    doc.select(0, doc.length());
+                    doc.select(0, length);
                 }
                 break;
             case 67: // C - copy to clipboard
@@ -248,6 +274,7 @@ exports.create = function(element) {
             handled = true;
         }
 
+        keyboardX = nextKeyboardX;
         return handled;
     };
 
@@ -260,17 +287,21 @@ exports.create = function(element) {
 
     var paint = function() {
 
-        if (doc.width() !== element.clientWidth) {
-            doc.width(element.clientWidth);
+        var availableWidth = element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!
+        if (doc.width() !== availableWidth) {
+            doc.width(availableWidth);
         }
 
-        canvas.width = Math.max(doc.actualWidth, element.clientWidth);
+        var docHeight = doc.frame.bounds().h;
+
+        canvas.width = Math.max(doc.frame.actualWidth(), element.clientWidth);
         canvas.height = element.clientHeight;
         canvas.style.top = element.scrollTop + 'px';
         spacer.style.width = canvas.width + 'px';
-        spacer.style.height = Math.max(doc.height, element.clientHeight) + 'px';
+        spacer.style.height = Math.max(docHeight, element.clientHeight) + 'px';
 
-        if (doc.height < (element.clientHeight - 50) && doc.actualWidth <= element.clientWidth) {
+        if (docHeight < (element.clientHeight - 50) &&
+            doc.frame.actualWidth() <= availableWidth) {
             element.style.overflow = 'hidden';
         } else {
             element.style.overflow = 'auto';
@@ -279,7 +310,7 @@ exports.create = function(element) {
         var ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.translate(0, -element.scrollTop);
-        doc.draw(ctx, element.scrollTop, element.scrollTop + canvas.height);
+        doc.draw(ctx, rect(0, element.scrollTop, canvas.width, canvas.height));
         doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
 
@@ -299,7 +330,7 @@ exports.create = function(element) {
 
     var updateTextArea = function() {
         focusChar = focusChar === null ? doc.selection.end : focusChar;
-        var endChar = doc.characterByOrdinal(focusChar);
+        var endChar = doc.byOrdinal(focusChar);
         focusChar = null;
         if (endChar) {
             var bounds = endChar.bounds();
@@ -334,40 +365,40 @@ exports.create = function(element) {
         }, 10);
     };
 
-    doc.selectionChanged(function() {
+    doc.selectionChanged(function(getformatting, takeFocus) {
         paint();
         if (!selectDragStart) {
-            updateTextArea();
+            if (takeFocus !== false) {
+                updateTextArea();
+            }
         }
     });
 
     dom.handleMouseEvent(spacer, 'mousedown', function(ev, x, y) {
-        var char = doc.characterByCoordinate(x, y);
-        selectDragStart = char.ordinal;
-        doc.select(char.ordinal, char.ordinal);
+        var node = doc.byCoordinate(x, y);
+        selectDragStart = node.ordinal;
+        doc.select(node.ordinal, node.ordinal);
+        keyboardX = null;
     });
 
     dom.handleMouseEvent(spacer, 'dblclick', function(ev, x, y) {
-        var char = doc.characterByCoordinate(x, y);
-        doc.select(char.word.ordinal, char.word.ordinal + char.word.word.text.length);
+        var node = doc.byCoordinate(x, y);
+        node = node.parent();
+        if (node) {
+            doc.select(node.ordinal, node.ordinal +
+                (node.word ? node.word.text.length : node.length));
+        }
     });
-
-    var areCharsEqual = function(a, b) {
-        return a ? (b && a.ordinal == b.ordinal) : !b;
-    };
 
     dom.handleMouseEvent(spacer, 'mousemove', function(ev, x, y) {
         if (selectDragStart !== null) {
-            var newHoverChar = doc.characterByCoordinate(x, y, true);
-            if (!areCharsEqual(hoverChar, newHoverChar)) {
-                hoverChar = newHoverChar;
-                if (hoverChar) {
-                    focusChar = hoverChar.ordinal;
-                    if (selectDragStart > hoverChar.ordinal) {
-                        doc.select(hoverChar.ordinal, selectDragStart);
-                    } else {
-                        doc.select(selectDragStart, hoverChar.ordinal);
-                    }
+            var node = doc.byCoordinate(x, y);
+            if (node) {
+                focusChar = node.ordinal;
+                if (selectDragStart > node.ordinal) {
+                    doc.select(node.ordinal, selectDragStart);
+                } else {
+                    doc.select(selectDragStart, node.ordinal);
                 }
             }
         }
