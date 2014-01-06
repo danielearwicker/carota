@@ -1,95 +1,100 @@
-var line = require('./line');
+'use strict';
 
-/*  A stateful transformer function that accepts words and emits lines. If the first word
-    is too wide, it will overhang; if width is zero or negative, there will be one word on
-    each line.
+var rect = require('./rect');
 
-    The y-coordinate is the top of the first line, not the baseline.
+module.exports = function(params) {
 
-    Returns a stream of line objects, each containing an array of positionedWord objects.
- */
-
-module.exports = function(left, top, width, ordinal, parent,
-                          includeTerminator, initialAscent, initialDescent) {
-
-    var lineBuffer = [],
+    var words = params.words,
+        bounds = params.bounds,
+        output = params.output,
+        lineBuffer = [],
         lineWidth = 0,
-        maxAscent = initialAscent || 0,
-        maxDescent = initialDescent || 0,
-        quit,
-        lastNewLineHeight = 0,
-        y = top;
 
-    var store = function(word, emit) {
-        lineBuffer.push(word);
-        lineWidth += word.width;
-        maxAscent = Math.max(maxAscent, word.ascent);
-        maxDescent = Math.max(maxDescent, word.descent);
-        if (word.isNewLine()) {
-            send(emit);
-            lastNewLineHeight = word.ascent + word.descent;
+        // running maxima for the buffered words
+        maxAscent = params.ascent || 0,
+        maxDescent = params.descent || 0,
+
+        align = null,
+        y = bounds.t;
+
+    var store = function(wordInfo) {
+        lineBuffer.push(wordInfo);
+        lineWidth += wordInfo.word.width;
+        maxAscent = Math.max(maxAscent, wordInfo.word.ascent);
+        maxDescent = Math.max(maxDescent, wordInfo.word.descent);
+        if (align === null) {
+            align = wordInfo.word.align();
         }
     };
 
-    var send = function(emit) {
-        if (quit || lineBuffer.length === 0) {
-            return;
+    var flush = function() {
+        if (lineBuffer.length) {
+            var baseline = y + maxAscent,
+                height = maxAscent + maxDescent,
+                lastWord = lineBuffer[lineBuffer.length - 1],
+                actualWidth = lineWidth - lastWord.word.space.width,
+                x = bounds.l,
+                spacing = 0;
+
+            if (actualWidth < bounds.w) {
+                switch (align) {
+                    case 'right':
+                        x = bounds.w - actualWidth;
+                        break;
+                    case 'center':
+                        x = (bounds.w - actualWidth) / 2;
+                        break;
+                    case 'justify':
+                        if (lineBuffer.length > 1 && !lastWord.isNewLine()) {
+                            spacing = (bounds.w - actualWidth) / (lineBuffer.length - 1);
+                        }
+                        break;
+                }
+            }
+
+            lineBuffer.forEach(function(info) {
+                var wordLeft = x;
+                x += (info.word.width + spacing);
+                output({
+                    index: info.index,
+                    bounds: rect(wordLeft, y, x - wordLeft, height),
+                    baseline: baseline,
+                    caret: rect(wordLeft, y, 1, height)
+                });
+            });
+
+            y += height;
         }
-        var l = line(parent, left, width, y + maxAscent, maxAscent, maxDescent, lineBuffer, ordinal);
-        ordinal += l.length;
-        quit = emit(l);
-        y += (maxAscent + maxDescent);
-        lineBuffer.length = 0;
+
         lineWidth = maxAscent = maxDescent = 0;
+        lineBuffer.length = 0;
+        align = null;
     };
 
-    var consumer = null;
+    while (words.advance() && y < bounds.b) {
+        var word = words.current(),
+            index = words.position(),
+            info = { word: word, index: index },
+            code = word.code;
 
-    return function(emit, inputWord) {
-        if (consumer) {
-            lastNewLineHeight = 0;
-            var node = consumer(inputWord);
-            if (node) {
-                consumer = null;
-                ordinal += node.length;
-                y += node.bounds().h;
-                Object.defineProperty(node, 'block', { value: true });
-                emit(node);
-            }
+        if (code && typeof code.block === 'function') {
+            store(info);
+            flush();
+            y = code.block(Object.create(params, {
+                bounds: { value: rect(bounds.l, y, bounds.w, bounds.h - y) }
+            }));
         } else {
-            var code = inputWord.code();
-            if (code && code.block) {
-                if (lineBuffer.length) {
-                    send(emit);
-                } else {
-                    y += lastNewLineHeight;
-                }
-                consumer = code.block(left, y, width, ordinal, parent, inputWord.codeFormatting());
-                lastNewLineHeight = 0;
-            }
-            else if (code && code.eof || inputWord.eof) {
-                if (!code || (includeTerminator && includeTerminator(code))) {
-                    store(inputWord, emit);
-                }
-                if (!lineBuffer.length) {
-                    emit(y + lastNewLineHeight - top);
-                } else {
-                    send(emit);
-                    emit(y - top);
-                }
-                quit = true;
+            if (!lineBuffer.length) {
+                store(info);
             } else {
-                lastNewLineHeight = 0;
-                if (!lineBuffer.length) {
-                    store(inputWord, emit);
-                } else {
-                    if (lineWidth + inputWord.text.width > width) {
-                        send(emit);
-                    }
-                    store(inputWord, emit);
+                if (lineWidth + words.current().text.width > bounds.w) {
+                    flush();
                 }
+                store(info);
             }
         }
-        return quit;
-    };
+    }
+
+    flush();
+    return y;
 };

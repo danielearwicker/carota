@@ -1,3 +1,5 @@
+'use strict';
+
 var runs = require('./runs');
 
 /*  Returns a font CSS/Canvas string based on the settings in a run
@@ -158,4 +160,19 @@ exports.draw = function(ctx, str, formatting, left, baseline, width, ascent, des
     if (formatting.strikeout) {
         ctx.fillRect(left, 1 + baseline - (ascent/2), width, 1);
     }
+};
+
+exports.make = function(prototype, str) {
+    return Object.create(prototype, {
+        measure: {
+            value: function(formatting) {
+                return exports.measure(str, formatting);
+            }
+        },
+        draw: {
+            value: function(ctx, x, y, width, ascent, descent, formatting) {
+                exports.draw(ctx, str, formatting, x, y, width, ascent, descent);
+            }
+        }
+    });
 };

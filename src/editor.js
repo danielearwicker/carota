@@ -1,7 +1,8 @@
+'use strict';
+
 var per = require('per');
 var carotaDoc = require('./doc');
 var dom = require('./dom');
-var rect = require('./rect');
 
 setInterval(function() {
     var editors = document.querySelectorAll('.carotaEditorCanvas');
@@ -55,7 +56,7 @@ exports.create = function(element) {
     };
 
     var exhausted = function(ordinal, direction) {
-        return direction < 0 ? ordinal <= 0 : ordinal >= doc.frame.length - 1;
+        return direction < 0 ? ordinal <= 0 : ordinal >= doc.length - 1;
     };
 
     var differentLine = function(caret1, caret2) {
@@ -110,7 +111,7 @@ exports.create = function(element) {
     var handleKey = function(key, selecting, ctrlKey) {
         var start = doc.selection.start,
             end = doc.selection.end,
-            length = doc.frame.length - 1,
+            length = doc.length - 1,
             handled = false;
 
         nextKeyboardX = null;
@@ -292,16 +293,16 @@ exports.create = function(element) {
             doc.width(availableWidth);
         }
 
-        var docHeight = doc.frame.bounds().h;
+        var docHeight = doc.height;
 
-        canvas.width = Math.max(doc.frame.actualWidth(), element.clientWidth);
+        canvas.width = Math.max(doc.actualWidth, element.clientWidth);
         canvas.height = element.clientHeight;
         canvas.style.top = element.scrollTop + 'px';
         spacer.style.width = canvas.width + 'px';
         spacer.style.height = Math.max(docHeight, element.clientHeight) + 'px';
 
         if (docHeight < (element.clientHeight - 50) &&
-            doc.frame.actualWidth() <= availableWidth) {
+            doc.actualWidth <= availableWidth) {
             element.style.overflow = 'hidden';
         } else {
             element.style.overflow = 'auto';
@@ -310,8 +311,9 @@ exports.create = function(element) {
         var ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.translate(0, -element.scrollTop);
-        doc.draw(ctx, rect(0, element.scrollTop, canvas.width, canvas.height));
-        doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
+        doc.draw(ctx, element.scrollTop, element.scrollTop + canvas.height);
+        doc.drawSelection(ctx, (selectDragStart !== null) ||
+                               (document.activeElement === textArea));
     };
 
     dom.handleEvent(element, 'scroll', paint);
@@ -330,31 +332,29 @@ exports.create = function(element) {
 
     var updateTextArea = function() {
         focusChar = focusChar === null ? doc.selection.end : focusChar;
-        var endChar = doc.byOrdinal(focusChar);
+        var caretRect = doc.getCaretCoords(focusChar);
         focusChar = null;
-        if (endChar) {
-            var bounds = endChar.bounds();
-            textAreaDiv.style.left = bounds.l + 'px';
-            textAreaDiv.style.top = bounds.t + 'px';
-            textArea.focus();
-            var scrollDownBy = Math.max(0, bounds.t + bounds.h -
-                    (element.scrollTop + element.clientHeight));
-            if (scrollDownBy) {
-                element.scrollTop += scrollDownBy;
-            }
-            var scrollUpBy = Math.max(0, element.scrollTop - bounds.t);
-            if (scrollUpBy) {
-                element.scrollTop -= scrollUpBy;
-            }
-            var scrollRightBy = Math.max(0, bounds.l -
-                (element.scrollLeft + element.clientWidth));
-            if (scrollRightBy) {
-                element.scrollLeft += scrollRightBy;
-            }
-            var scrollLeftBy = Math.max(0, element.scrollLeft - bounds.l);
-            if (scrollLeftBy) {
-                element.scrollLeft -= scrollLeftBy;
-            }
+
+        textAreaDiv.style.left = caretRect.l + 'px';
+        textAreaDiv.style.top = caretRect.t + 'px';
+        textArea.focus();
+        var scrollDownBy = Math.max(0, caretRect.t + caretRect.h -
+                (element.scrollTop + element.clientHeight));
+        if (scrollDownBy) {
+            element.scrollTop += scrollDownBy;
+        }
+        var scrollUpBy = Math.max(0, element.scrollTop - caretRect.t);
+        if (scrollUpBy) {
+            element.scrollTop -= scrollUpBy;
+        }
+        var scrollRightBy = Math.max(0, caretRect.l -
+            (element.scrollLeft + element.clientWidth));
+        if (scrollRightBy) {
+            element.scrollLeft += scrollRightBy;
+        }
+        var scrollLeftBy = Math.max(0, element.scrollLeft - caretRect.l);
+        if (scrollLeftBy) {
+            element.scrollLeft -= scrollLeftBy;
         }
         textAreaContent = doc.selectedRange().plainText();
         textArea.value = textAreaContent;
@@ -367,39 +367,36 @@ exports.create = function(element) {
 
     doc.selectionChanged(function(getformatting, takeFocus) {
         paint();
-        if (!selectDragStart) {
+        if (selectDragStart === null) {
             if (takeFocus !== false) {
                 updateTextArea();
             }
         }
     });
 
+    doc.contentChanged(paint);
+
     dom.handleMouseEvent(spacer, 'mousedown', function(ev, x, y) {
-        var node = doc.byCoordinate(x, y);
-        selectDragStart = node.ordinal;
-        doc.select(node.ordinal, node.ordinal);
+        var ordinal = doc.byCoordinate(x, y);
+        doc.select(ordinal, ordinal);
+        selectDragStart = ordinal;
         keyboardX = null;
     });
 
     dom.handleMouseEvent(spacer, 'dblclick', function(ev, x, y) {
-        var node = doc.byCoordinate(x, y);
-        node = node.parent();
-        if (node) {
-            doc.select(node.ordinal, node.ordinal +
-                (node.word ? node.word.text.length : node.length));
-        }
+        var ordinal = doc.byCoordinate(x, y);
+        var wordInfo = doc.wordContainingOrdinal(ordinal);
+        doc.select(ordinal, ordinal + wordInfo.word.text.length);
     });
 
     dom.handleMouseEvent(spacer, 'mousemove', function(ev, x, y) {
         if (selectDragStart !== null) {
-            var node = doc.byCoordinate(x, y);
-            if (node) {
-                focusChar = node.ordinal;
-                if (selectDragStart > node.ordinal) {
-                    doc.select(node.ordinal, selectDragStart);
-                } else {
-                    doc.select(selectDragStart, node.ordinal);
-                }
+            var ordinal = doc.byCoordinate(x, y);
+            focusChar = ordinal;
+            if (selectDragStart > ordinal) {
+                doc.select(ordinal, selectDragStart);
+            } else {
+                doc.select(selectDragStart, ordinal);
             }
         }
     });

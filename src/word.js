@@ -1,6 +1,9 @@
+'use strict';
+
 var per = require('per');
 var part = require('./part');
 var runs = require('./runs');
+var text = require('./text');
 
 /*  A Word has the following properties:
 
@@ -28,14 +31,8 @@ var runs = require('./runs');
  */
 
 var prototype = {
-    isNewLine: function() {
-        return this.text.parts.length == 1 && this.text.parts[0].isNewLine;
-    },
-    code: function() {
-        return this.text.parts.length == 1 && this.text.parts[0].code;
-    },
-    codeFormatting: function() {
-        return this.text.parts.length == 1 && this.text.parts[0].run;
+    isBreaker: function() {
+        return this.code && this.code.block;
     },
     draw: function(ctx, x, y) {
         per(this.text.parts).concat(this.space.parts).forEach(function(part) {
@@ -85,6 +82,20 @@ var prototype = {
                 }
             });
         });
+    },
+    characters: function() {
+        var cache = [0], x = 0, offset = 0;
+        if (!this.code) {
+            var eachPart = function(part) {
+                runs.pieceCharacters(function(ch) {
+                    cache[offset++] = x;
+                    x += text.measure(ch, part.run).width;
+                }, part.run.text);
+            };
+            this.text.parts.some(eachPart);
+            this.space.parts.some(eachPart);
+        }
+        return cache;
     }
 };
 
@@ -109,11 +120,17 @@ var section = function(runEmitter, codes) {
     return s;
 };
 
+var newLineCode = {
+    block: function(params) {
+        return params.bounds.t;
+    }
+};
+
 module.exports = function(coords, codes) {
     var text, space;
     if (!coords) {
         // special end-of-document marker, mostly like a newline with no formatting
-        text = [{ text: '\n' }];
+        text = [{ text: '' }];
         space = [];
     } else {
         text = coords.text.cut(coords.spaces);
@@ -129,6 +146,19 @@ module.exports = function(coords, codes) {
         width: { value: text.width + space.width, configurable: true },
         length: { value: text.length + space.length }
     });
+
+    if (word.text.parts.length === 1 && word.space.parts.length === 0) {
+
+        Object.defineProperty(word, 'only', { value: word.text.parts[0] });
+
+        if (word.only.isNewLine || !coords) {
+            Object.defineProperty(word, 'code', { value: newLineCode });
+
+        } else if (word.only.code) {
+            Object.defineProperty(word, 'code', { value: word.only.code });
+        }
+    }
+
     if (!coords) {
         Object.defineProperty(word, 'eof', { value: true });
     }

@@ -1,167 +1,147 @@
+'use strict';
+
 var text = require('./text');
-var frame = require('./frame');
-var node = require('./node');
 var rect = require('./rect');
-var util = require('./util');
-
-var inlineNodePrototype = node.derive({
-    parent: function() {
-        return this._parent;
-    },
-    draw: function(ctx) {
-        this.inline.draw(ctx,
-            this.left,
-            this.baseline,
-            this.measured.width,
-            this.measured.ascent,
-            this.measured.descent,
-            this.formatting);
-    },
-    position: function(left, baseline, bounds) {
-        this.left = left;
-        this.baseline = baseline;
-        if (bounds) {
-            this._bounds = bounds;
-        }
-    },
-    bounds: function() {
-        return this._bounds || rect(this.left, this.baseline - this.measured.ascent,
-            this.measured.width, this.measured.ascent + this.measured.descent);
-    },
-    byCoordinate: function(x, y) {
-        if (x <= this.bounds().center().x) {
-            return this;
-        }
-        return this.next();
-    }
-});
-
-var inlineNode = function(inline, parent, ordinal, length, formatting) {
-    if (!inline.draw || !inline.measure) {
-        throw new Error();
-    }
-    return Object.create(inlineNodePrototype, {
-        inline: { value: inline },
-        _parent: { value: parent },
-        ordinal: { value: ordinal },
-        length: { value: length },
-        formatting: { value: formatting },
-        measured: {
-            value: inline.measure(formatting)
-        }
-    });
-};
+var wrap = require('./wrap');
 
 var codes = {};
 
 codes.number = function(obj, number) {
-    var formattedNumber = (number + 1) + '.';
-    return {
-        measure: function(formatting) {
-            return text.measure(formattedNumber, formatting);
-        },
-        draw: function(ctx, x, y, width, ascent, descent, formatting) {
-            text.draw(ctx, formattedNumber, formatting, x, y, width, ascent, descent);
-        }
-    };
+    return text.make(obj, (number + 1) + '.');
 };
 
 var listTerminator = function(obj) {
-    return util.derive(obj, {
-        eof: true,
-        measure: function(formatting) {
-            return { width: 18, ascent: 0, descent: 0 }; // text.measure(text.enter, formatting);
-        },
-        draw: function(ctx, x, y) {
-            // ctx.fillText(text.enter, x, y);
-        }
+    return Object.create(text.make(obj, text.enter), {
+        block: { value: true }
     });
 };
 
 codes.listNext = codes.listEnd = listTerminator;
-
-codes.listStart = function(obj, data, allCodes) {
-    return util.derive(obj, {
-        block: function(left, top, width, ordinal, parent, formatting) {
-            var list = node.generic('list', parent, left, top),
-                itemNode,
-                itemFrame,
-                itemMarker;
-
-            var indent = 50, spacing = 10;
-
-            var startItem = function(code, formatting) {
-                itemNode = node.generic('item', list);
-                var marker = allCodes(code.marker || { $: 'number' }, list.children().length);
-                itemMarker = inlineNode(marker, itemNode, ordinal, 1, formatting);
-                itemMarker.block = true;
-                itemFrame = frame(
-                    left + indent, top, width - indent, ordinal + 1, itemNode,
-                    function(terminatorCode) {
-                        return terminatorCode.$ === 'listEnd';
-                    },
-                    itemMarker.measured.ascent
-                );
-            };
-
-            startItem(obj, formatting);
-
-            return function(inputWord) {
-                if (itemFrame) {
-                    itemFrame(function(finishedFrame) {
-                        ordinal = finishedFrame.ordinal + finishedFrame.length;
-                        var frameBounds = finishedFrame.bounds();
-
-                        // get first line and position marker
-                        var firstLine = finishedFrame.first();
-                        var markerLeft = left + indent - spacing - itemMarker.measured.width;
-                        var markerBounds = rect(left, top, indent, frameBounds.h);
-                        if ('baseline' in firstLine) {
-                            itemMarker.position(markerLeft, firstLine.baseline, markerBounds);
-                        } else {
-                            itemMarker.position(markerLeft, top + itemMarker.measured.ascent, markerBounds);
-                        }
-
-                        top = frameBounds.t + frameBounds.h;
-
-                        itemNode.children().push(itemMarker);
-                        itemNode.children().push(finishedFrame);
-                        itemNode.finalize();
-
-                        list.children().push(itemNode);
-                        itemNode = itemFrame = itemMarker = null;
-                    }, inputWord);
-                } else {
-                    ordinal++;
-                }
-
-                if (!itemFrame) {
-                    var i = inputWord.code();
-                    if (i) {
-                        if (i.$ == 'listEnd') {
-                            list.finalize();
-                            return list;
-                        }
-                        if (i.$ == 'listNext') {
-                            startItem(i, inputWord.codeFormatting());
-                        }
+/*
+var listTerminator = function(obj) {
+    return Object.create(obj, {
+        measure: {
+            value: function(formatting) {
+                return { width: 0, ascent: 0, descent: 0 };
+            }
+        },
+        draw: {
+            value: function(ctx, x, y, width, ascent, descent, formatting) {
+            }
+        },
+        block: {
+            value: function(params) {
+                return params.bounds.t;
+            }
+        }
+    });
+};
+*/
+var terminatingIterator = function(baseIterator) {
+    var start = baseIterator.position(), depth = 0;
+    return Object.create(baseIterator, {
+        advance: {
+            value: function() {
+                var code = baseIterator.current().code;
+                if (depth === 0 && baseIterator.position() !== start) {
+                    if (code && (code.$ === 'listNext' ||
+                        code.$ === 'listEnd')) {
+                        return false;
                     }
                 }
-            };
+                if (depth > 0 && code && code.$ === 'listEnd') {
+                    depth--;
+                }
+                if (!baseIterator.advance()) {
+                    return false;
+                }
+                code = baseIterator.current().code;
+                if (code && code.$ === 'listStart') {
+                    depth++;
+                }
+                return true;
+            }
         }
     });
 };
 
-module.exports = exports = function(obj, number, allCodes) {
+codes.listStart = function(obj, data_notUsed, allCodes) {
+    return Object.create(text.make(obj, text.enter), {
+        block: {
+            value: function(params) {
+
+                var indent = 50,
+                    spacing = 10,
+                    number = 0,
+                    y = params.bounds.t,
+                    code = obj;
+
+                while (code.$ !== 'listEnd' && y < params.bounds.b) {
+                    if (code.$ !== 'listStart' && code.$ !== 'listNext') {
+                        throw new Error('Expected listStart or listNext');
+                    }
+                    (function() {
+                        var marker = allCodes(code.marker || { $: 'number' }, number++);
+                        var markerFormatting = params.words.current().only.run;
+                        var markerMeasurements = marker.measure(markerFormatting);
+                        var markerIndex = params.words.position();
+                        var markerBaseline = null;
+
+                        var bottom = wrap({
+                            words: terminatingIterator(params.words),
+                            bounds: rect(
+                                params.bounds.l + indent, y,
+                                params.bounds.w - indent, params.bounds.h - y
+                            ),
+                            output: function(info) {
+                                if (markerBaseline === null && info.baseline) {
+                                    markerBaseline = info.baseline;
+                                }
+                                params.output(info);
+                            },
+                            ascent: markerMeasurements.ascent,
+                            descent: markerMeasurements.descent
+                        });
+
+                        if (markerBaseline === null) {
+                            markerBaseline = y + markerMeasurements.ascent;
+                        }
+
+                        params.output({
+                            index: markerIndex,
+                            bounds: rect(params.bounds.l, y, indent, bottom - y),
+                            draw: function(ctx) {
+                                marker.draw(ctx,
+                                    params.bounds.l + indent - spacing - markerMeasurements.width,
+                                    markerBaseline,
+                                    markerMeasurements.width,
+                                    markerMeasurements.ascent,
+                                    markerMeasurements.descent,
+                                    markerFormatting);
+                            }
+                        });
+
+                        y = Math.max(bottom, markerBaseline + markerMeasurements.descent);
+                        code = params.words.current().code;
+                    })();
+                }
+
+                return y;
+            }
+        }
+    });
+};
+
+module.exports = function(obj, number, allCodes) {
     var impl = codes[obj.$];
     return impl && impl(obj, number, allCodes);
 };
 
-exports.editFilter = function(doc) {
+module.exports.editFilter = function(doc) {
     var balance = 0;
 
     if (!doc.words.some(function(word, i) {
-        var code = word.code();
+        var code = word.code;
         if (code) {
             switch (code.$) {
                 case 'listStart':
@@ -169,12 +149,14 @@ exports.editFilter = function(doc) {
                     break;
                 case 'listNext':
                     if (balance === 0) {
-                        doc.spliceWordsWithRuns(i, 1, [util.derive(word.codeFormatting(), {
-                            text: {
-                                $: 'listStart',
-                                marker: code.marker
+                        doc.spliceWordsWithRuns(i, 1, Object.create(word.codeFormatting(), {
+                            value: {
+                                text: {
+                                    $: 'listStart',
+                                    marker: code.marker
+                                }
                             }
-                        })]);
+                        }));
                         return true;
                     }
                     break;

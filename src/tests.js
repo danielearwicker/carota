@@ -1,5 +1,6 @@
+'use strict';
+
 var per = require('per');
-var doc = require('./doc');
 var characters = require('./characters');
 var split = require('./split');
 var wrap = require('./wrap');

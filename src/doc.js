@@ -1,22 +1,40 @@
+'use strict';
+
 var per = require('per');
 var characters = require('./characters');
 var split = require('./split');
 var word = require('./word');
-var node = require('./node');
 var runs = require('./runs');
 var range = require('./range');
 var util = require('./util');
-var frame = require('./frame');
 var codes = require('./codes');
 var rect = require('./rect');
+var wrap = require('./wrap');
+var iterator = require('./iterator');
+var text = require('./text');
+
+var lengthOfWords = function(words) {
+    return words.map(function(w) {
+        return w.length;
+    }).reduce(util.plus, 0);
+};
 
 var makeEditCommand = function(doc, start, count, words) {
     var selStart = doc.selection.start, selEnd = doc.selection.end;
     return function(log) {
         doc._wordOrdinals = [];
         var oldWords = Array.prototype.splice.apply(doc.words, [start, count].concat(words));
+        doc.length += (lengthOfWords(words) - lengthOfWords(oldWords));
         log(makeEditCommand(doc, start, words.length, oldWords));
-        doc._nextSelection = { start: selStart, end: selEnd };
+
+        selStart = Math.min(selStart, doc.length);
+        selEnd = Math.min(selEnd, doc.length);
+
+        if (doc.selection.start !== selStart || doc.selection.end !== selEnd) {
+            setTimeout(function() {
+                doc.select(selStart, selEnd);
+            }, 10);
+        }
     };
 };
 
@@ -24,7 +42,7 @@ var makeTransaction = function(perform) {
     var commands = [];
     var log = function(command) {
         commands.push(command);
-        log.length = commands.length;
+        log.nonEmptyTransaction = true;
     };
     perform(log);
 
@@ -37,48 +55,73 @@ var makeTransaction = function(perform) {
     };
 };
 
-var isBreaker = function(word) {
-    if (word.isNewLine()) {
-        return true;
-    }
-    var code = word.code();
-    return !!(code && (code.block || code.eof));
-};
+var bandHeight = 100;
 
-var prototype = node.derive({
+var prototype = {
     load: function(runs, takeFocus) {
-        var self = this;
         this.undo = [];
         this.redo = [];
         this._wordOrdinals = [];
+        this.length = 0;
+        var self = this;
         this.words = per(characters(runs)).per(split(self.codes)).map(function(w) {
-            return word(w, self.codes);
+            w = word(w, self.codes);
+            self.length += w.length;
+            return w;
         }).all();
-        this.layout();
         this.contentChanged.fire();
         this.select(0, 0, takeFocus);
     },
+    bands: function(top, bottom) {
+        var result = [],
+            startBand = Math.floor(top / bandHeight),
+            endBand = Math.floor(bottom / bandHeight);
+
+        if (!this._bands) {
+            this._bands = [];
+        }
+
+        for (var b = startBand; b <= endBand; b++) {
+            result.push(this._bands[b] || (this._bands[b] = []));
+        }
+
+        return result;
+    },
     layout: function() {
-        this.frame = null;
-        try {
-            this.frame = per(this.words).per(frame(0, 0, this._width, 0, this)).first();
-        } catch (x) {
-            console.error(x);
-        }
-        if (!this.frame) {
-            console.error('A bug somewhere has produced an invalid state - rolling back');
-            this.performUndo();
-        } else if (this._nextSelection) {
-            var next = this._nextSelection;
-            delete this._nextSelection;
-            this.select(next.start, next.end);
-        }
+        var self = this;
+
+        self._output = [];
+        self.actualWidth = 0;
+        self._bands = [];
+
+        self.height = wrap({
+            words: iterator(this.words),
+            bounds: rect(0, 0, this._width, 100000),
+            output: function(info) {
+
+                var existing = self._output[info.index];
+                if (existing) {
+                    Object.keys(info).forEach(function(key) {
+                        existing[key] = info[key];
+                    });
+                } else {
+                    self._output[info.index] = existing = info;
+                    var pos = info.caret;
+                    self.bands(pos.t, pos.b).forEach(function(band) {
+                        band.push(info);
+                    });
+                }
+
+                self.actualWidth = Math.max(self.actualWidth,
+                        Math.max(existing.caret.r, existing.bounds.r));
+            }
+        });
     },
     range: function(start, end) {
         return range(this, start, end);
     },
     documentRange: function() {
-        return this.range(0, this.frame.length - 1);
+        return this.range(0, this.length - 1);
     },
     selectedRange: function() {
         return this.range(this.selection.start, this.selection.end);
@@ -92,9 +135,9 @@ var prototype = node.derive({
         // find the character after the nearest breaker before start
         var startInfo = this.wordContainingOrdinal(start);
         start = 0;
-        if (startInfo && !isBreaker(startInfo.word)) {
+        if (startInfo && !startInfo.word.isBreaker()) {
             for (i = startInfo.index; i > 0; i--) {
-                if (isBreaker(this.words[i - 1])) {
+                if (this.words[i - 1].isBreaker()) {
                     start = this.wordOrdinal(i);
                     break;
                 }
@@ -103,10 +146,10 @@ var prototype = node.derive({
 
         // find the nearest breaker after end
         var endInfo = this.wordContainingOrdinal(end);
-        end = this.frame.length - 1;
-        if (endInfo && !isBreaker(endInfo.word)) {
+        end = this.length - 1;
+        if (endInfo && !endInfo.word.isBreaker()) {
             for (i = endInfo.index; i < this.words.length; i++) {
-                if (isBreaker(this.words[i])) {
+                if (this.words[i].isBreaker()) {
                     end = this.wordOrdinal(i);
                     break;
                 }
@@ -137,7 +180,10 @@ var prototype = node.derive({
         if (index < this.words.length) {
             var cached = this._wordOrdinals.length;
             if (cached < (index + 1)) {
-                var o = cached > 0 ? this._wordOrdinals[cached - 1] : 0;
+                var o = 0;
+                if (cached > 0) {
+                    o = this._wordOrdinals[cached - 1] + this.words[cached - 1].length;
+                }
                 for (var n = cached; n <= index; n++) {
                     this._wordOrdinals[n] = o;
                     o += this.words[n].length;
@@ -147,6 +193,8 @@ var prototype = node.derive({
         }
     },
     wordContainingOrdinal: function(ordinal) {
+        ordinal = Math.min(Math.max(0, ordinal), this.length - 1);
+
         // could rewrite to be faster using binary search over this.wordOrdinal
         var result;
         var pos = 0;
@@ -165,8 +213,8 @@ var prototype = node.derive({
         return result;
     },
     runs: function(emit, range) {
-        var startDetails = this.wordContainingOrdinal(Math.max(0, range.start)),
-            endDetails = this.wordContainingOrdinal(Math.min(range.end, this.frame.length - 1));
+        var startDetails = this.wordContainingOrdinal(range.start),
+            endDetails = this.wordContainingOrdinal(range.end);
         if (startDetails.index === endDetails.index) {
             startDetails.word.runs(emit, {
                 start: startDetails.offset,
@@ -198,13 +246,13 @@ var prototype = node.derive({
             self._filtersRunning++;
         } else {
             for (var n = 0; n < count; n++) {
-                if (this.words[wordIndex + n].code()) {
+                if (this.words[wordIndex + n].code) {
                     runFilters = true;
                 }
             }
             if (!runFilters) {
                 runFilters = newWords.some(function(word) {
-                    return !!word.code();
+                    return !!word.code;
                 });
             }
         }
@@ -228,6 +276,8 @@ var prototype = node.derive({
                 }
             }
         });
+
+        this.layout();
     },
     splice: function(start, end, text) {
         if (typeof text === 'string') {
@@ -236,7 +286,7 @@ var prototype = node.derive({
                 .per(this.runs, this)
                 .first();
             text = [
-                Object.create(sampleRun, { text: { value: text } })
+                Object.create(sampleRun || {}, { text: { value: text } })
             ];
         } else if (!Array.isArray(text)) {
             text = [{ text: text }];
@@ -249,7 +299,7 @@ var prototype = node.derive({
 
         var prefix;
         if (start === startWord.ordinal) {
-            if (startWord.index > 0 && !isBreaker(this.words[startWord.index - 1])) {
+            if (startWord.index > 0 && !this.words[startWord.index - 1].isBreaker()) {
                 startWord.index--;
                 var previousWord = this.words[startWord.index];
                 prefix = per({}).per(previousWord.runs, previousWord).all();
@@ -264,7 +314,7 @@ var prototype = node.derive({
 
         var suffix;
         if (end === endWord.ordinal) {
-            if ((end === this.frame.length - 1) || isBreaker(endWord.word)) {
+            if ((end === this.length - 1) || endWord.word.isBreaker()) {
                 suffix = [];
                 endWord.index--;
             } else {
@@ -276,12 +326,12 @@ var prototype = node.derive({
                     .all();
         }
 
-        var oldLength = this.frame.length;
+        var oldLength = this.length;
 
         this.spliceWordsWithRuns(startWord.index, (endWord.index - startWord.index) + 1,
             per(prefix).concat(text).concat(suffix).per(runs.consolidate()).all());
 
-        return this.frame ? (this.frame.length - oldLength) : 0;
+        return this.length - oldLength;
     },
     registerEditFilter: function(filter) {
         this.editFilters.push(filter);
@@ -292,9 +342,6 @@ var prototype = node.derive({
         }
         this._width = width;
         this.layout();
-    },
-    children: function() {
-        return [this.frame];
     },
     toggleCaret: function() {
         var old = this.caretVisible;
@@ -307,42 +354,76 @@ var prototype = node.derive({
         }
         return this.caretVisible !== old;
     },
-    getCaretCoords: function(ordinal) {
-        var node = this.byOrdinal(ordinal), b;
-        if (node) {
-            if (node.block && ordinal > 0) {
-                var nodeBefore = this.byOrdinal(ordinal - 1);
-                if (nodeBefore.newLine) {
-                    var newLineBounds = nodeBefore.bounds();
-                    var lineBounds = nodeBefore.parent().parent().bounds();
-                    b = rect(lineBounds.l, lineBounds.b, 1, newLineBounds.h);
-                } else {
-                    b = nodeBefore.bounds();
-                    b = rect(b.r, b.t, 1, b.h);
-                }
-            } else {
-                b = node.bounds();
-                if (b.h) {
-                    b = rect(b.l, b.t, 1, b.h);
-                } else {
-                    b = rect(b.l, b.t, b.w, 1);
-                }
-            }
-            return b;
+    getWordCharacters: function(index) {
+        var word = this.words[index];
+        var outputInfo = this._output[index];
+        if (!outputInfo.characters) {
+            outputInfo.characters = word.characters();
         }
+        return outputInfo.characters;
+    },
+    getCaretCoords: function(ordinal) {
+        var wordInfo = this.wordContainingOrdinal(ordinal);
+        var outputInfo = this._output[wordInfo.index];
+        if (wordInfo.word.isBreaker()) {
+            return outputInfo.caret;
+        }
+        var chars = this.getWordCharacters(wordInfo.index);
+        return rect(
+            outputInfo.bounds.l + chars[wordInfo.offset],
+            outputInfo.bounds.t, 1, outputInfo.bounds.h
+        );
     },
     byCoordinate: function(x, y) {
-        var ordinal = this.frame.byCoordinate(x, y).ordinal;
-        var caret = this.getCaretCoords(ordinal);
-        while (caret.b <= y && ordinal < (this.frame.length - 1)) {
-            ordinal++;
-            caret = this.getCaretCoords(ordinal);
+        var closest = null, distance;
+        this.bands(y, y)[0].some(function(outputInfo) {
+            var pos = outputInfo.bounds;
+            if (pos.t <= y && pos.b >= y) {
+                var d = (x >= pos.l && x < pos.r) ? -1 :
+                    Math.min(Math.abs(x - pos.l),
+                             Math.abs(x - pos.r));
+                if (!closest || d < distance) {
+                    closest = outputInfo;
+                    distance = d;
+                }
+                if (distance < 0) {
+                    return true;
+                }
+            }
+        });
+        if (!closest) {
+            return this.length - 1;
         }
-        while (caret.t >= y && ordinal > 0) {
-            ordinal--;
-            caret = this.getCaretCoords(ordinal);
+        var baseOrdinal = this.wordOrdinal(closest.index);
+        if (this.words[closest.index].code) {
+            return baseOrdinal;
         }
-        return this.byOrdinal(ordinal);
+        if (x < closest.caret.l) {
+            return baseOrdinal;
+        }
+        var chars = this.getWordCharacters(closest.index);
+        var last = chars.length - 1;
+        for (var c = 0; c <= last; c++) {
+            var l = closest.bounds.l + chars[c];
+            var r = c < last ? (closest.bounds.l + chars[c + 1]) : closest.bounds.r;
+            var m = (l + r) / 2;
+            if (x >= l && x < r) {
+                return baseOrdinal + c + (x > m ? 1 : 0);
+            }
+        }
+        // must be right of last character
+        return baseOrdinal + chars.length;
+    },
+    draw: function(ctx, viewPortTop, viewPortBottom) {
+        var self = this;
+        this._output.forEach(function(outputInfo, index) {
+            if (outputInfo.draw) {
+                outputInfo.draw(ctx);
+            } else {
+                var word = self.words[index];
+                word.draw(ctx, outputInfo.bounds.l, outputInfo.baseline);
+            }
+        });
     },
     drawSelection: function(ctx, hasFocus) {
         if (this.selection.end === this.selection.start) {
@@ -358,9 +439,33 @@ var prototype = node.derive({
         } else {
             ctx.save();
             ctx.fillStyle = hasFocus ? 'rgba(0, 100, 200, 0.3)' : 'rgba(160, 160, 160, 0.3)';
-            this.selectedRange().parts(function(part) {
-                part.bounds(true).fill(ctx);
-            });
+
+            var startWord = this.wordContainingOrdinal(this.selection.start),
+                endWord = this.wordContainingOrdinal(this.selection.end),
+                startIndex = startWord.index, endIndex = endWord.index, b, c;
+
+            if (startWord.index === endWord.index) {
+                var cs = this.getWordCharacters(startWord.index),
+                    c1 = cs[startWord.offset], c2 = cs[endWord.offset];
+                b = this._output[startWord.index].bounds;
+                rect(b.l + c1, b.t, c2 - c1, b.h).fill(ctx);
+            } else {
+                if (startWord.offset > 0) {
+                    startIndex++;
+                    b = this._output[startWord.index].bounds;
+                    c = this.getWordCharacters(startWord.index)[startWord.offset];
+                    rect(b.l + c, b.t, b.r - (b.l + c), b.h).fill(ctx);
+                }
+                for (var i = startIndex; i < endIndex; i++) {
+                    this._output[i].bounds.fill(ctx);
+                }
+                if (endWord.offset > 0) {
+                    b = this._output[endWord.index].bounds;
+                    c = this.getWordCharacters(endWord.index)[endWord.offset];
+                    rect(b.l, b.t, c, b.h).fill(ctx);
+                }
+            }
+
             ctx.restore();
         }
     },
@@ -378,14 +483,10 @@ var prototype = node.derive({
         this.selectionChanged.fire(getFormatting, takeFocus);
     },
     select: function(ordinal, ordinalEnd, takeFocus) {
-        if (!this.frame) {
-            // Something has gone terribly wrong - doc.transaction will rollback soon
-            return;
-        }
         this.selection.start = Math.max(0, ordinal);
         this.selection.end = Math.min(
             typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
-            this.frame.length - 1
+            this.length
         );
         this.selectionJustChanged = true;
         this.caretVisible = true;
@@ -424,25 +525,26 @@ var prototype = node.derive({
             }
             this.redo.length = 0;
             var changed = false;
-            this.undo.push(makeTransaction(function(log) {
+            var trans = makeTransaction(function(log) {
                 self._currentTransaction = log;
                 try {
                     perform(log);
                 } finally {
-                    changed = log.length > 0;
+                    changed = log.nonEmptyTransaction;
                     self._currentTransaction = null;
                 }
-            }));
+            });
             if (changed) {
+                this.undo.push(trans);
                 self.layout();
                 self.contentChanged.fire();
             }
         }
     },
     type: 'document'
-});
+};
 
-exports = module.exports = function() {
+module.exports = function() {
     var doc = Object.create(prototype);
     doc._width = 0;
     doc.selection = { start: 0, end: 0 };

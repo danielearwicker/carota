@@ -1,3 +1,5 @@
+'use strict';
+
 exports.formattingKeys = [ 'bold', 'italic', 'underline', 'strikeout', 'color', 'font', 'size', 'align', 'script' ];
 
 exports.defaultFormatting = {

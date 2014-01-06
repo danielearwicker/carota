@@ -1,3 +1,5 @@
+'use strict';
+
 var runs = require('./runs');
 var per = require('per');
 

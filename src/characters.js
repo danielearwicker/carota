@@ -1,3 +1,5 @@
+'use strict';
+
 var runs = require('./runs');
 
 var compatible = function(a, b) {

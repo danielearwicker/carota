@@ -1,3 +1,4 @@
+'use strict';
 
 var prototype = {
     contains: function(x, y) {

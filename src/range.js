@@ -1,3 +1,5 @@
+'use strict';
+
 var per = require('per');
 var runs = require('./runs');
 
@@ -10,26 +12,6 @@ function Range(doc, start, end) {
         this.end = start;
     }
 }
-
-Range.prototype.parts = function(emit, list) {
-    list = list || this.doc.children();
-    var self = this;
-
-    list.some(function(item) {
-        if (item.ordinal + item.length <= self.start) {
-            return false;
-        }
-        if (item.ordinal >= self.end) {
-            return true;
-        }
-        if (item.ordinal >= self.start &&
-            item.ordinal + item.length <= self.end) {
-            emit(item);
-        } else {
-            self.parts(emit, item.children());
-        }
-    });
-};
 
 Range.prototype.clear = function() {
     return this.setText([]);

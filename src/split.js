@@ -1,3 +1,5 @@
+'use strict';
+
 /*  Creates a stateful transformer function that consumes Characters and produces "word coordinate"
     objects, which are triplets of Characters representing the first characters of:
 

@@ -1,3 +1,4 @@
+'use strict';
 
 exports.isAttached = function(element) {
     var ancestor = element;
