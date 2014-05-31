@@ -46,7 +46,7 @@ exports.create = function(element) {
         textAreaContent = '',
         richClipboard = null,
         plainClipboard = null;
-
+    
     var toggles = {
         66: 'bold',
         73: 'italic',
@@ -294,10 +294,18 @@ exports.create = function(element) {
 
         var docHeight = doc.frame.bounds().h;
 
-        canvas.width = Math.max(doc.frame.actualWidth(), element.clientWidth);
-        canvas.height = element.clientHeight;
+        var dpr = Math.max(1, window.devicePixelRatio);
+        
+        var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
+            logicalHeight = element.clientHeight;
+        
+        canvas.width = dpr * logicalWidth;
+        canvas.height = dpr * logicalHeight;
+        canvas.style.width = logicalWidth + 'px';
+        canvas.style.height = logicalHeight + 'px';
+        
         canvas.style.top = element.scrollTop + 'px';
-        spacer.style.width = canvas.width + 'px';
+        spacer.style.width = logicalWidth + 'px';
         spacer.style.height = Math.max(docHeight, element.clientHeight) + 'px';
 
         if (docHeight < (element.clientHeight - 50) &&
@@ -308,9 +316,11 @@ exports.create = function(element) {
         }
 
         var ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.scale(dpr, dpr);
+
+        ctx.clearRect(0, 0, logicalWidth, logicalHeight);
         ctx.translate(0, -element.scrollTop);
-        doc.draw(ctx, rect(0, element.scrollTop, canvas.width, canvas.height));
+        doc.draw(ctx, rect(0, element.scrollTop, logicalWidth, logicalHeight));
         doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
 
