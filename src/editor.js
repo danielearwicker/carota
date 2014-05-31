@@ -294,7 +294,7 @@ exports.create = function(element) {
 
         var docHeight = doc.frame.bounds().h;
 
-        var dpr = Math.max(1, window.devicePixelRatio);
+        var dpr = Math.max(1, window.devicePixelRatio || 1);
         
         var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
             logicalHeight = element.clientHeight;
