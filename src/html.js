@@ -86,8 +86,8 @@ var handlers = [
     styleValue('color', 'color'),
     styleValue('fontFamily', 'font', fontName),
     styleValue('fontSize', 'size', function(size) {
-        var m = size.match(/^([\d\.]+)pt$/);
-        return m ? parseFloat(m[1]) : 10
+        var m = size.match(/^([\d\.]+)(pt|px)$/);
+        return m ? parseFloat(m[1]) : 10;
     }),
     styleValue('textAlign', 'align', checkAlign),
     function(node, formatting) {
