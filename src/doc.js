@@ -244,6 +244,10 @@ var prototype = node.derive({
             var sampleRun = per({ start: sample, end: sample + 1 })
                 .per(this.runs, this)
                 .first();
+            if (!sampleRun) {
+                sampleRun = { text: text };
+            }
+
             text = [
                 Object.create(sampleRun, { text: { value: text } })
             ];

@@ -46,6 +46,9 @@ var checkAlign = function(value) {
 };
 
 var fontName = function(name) {
+    //TODO: Need to fix getting font name from font tag
+    if(name.value) name = name.value;
+
     var s = name.split(/\s*,\s*/g);
     if (s.length == 0) {
         return name;
@@ -84,6 +87,10 @@ var handlers = [
     styleFlag('textDecoration', 'underline', 'underline'),
     styleFlag('textDecoration', 'line-through', 'strikeout'),
     styleValue('color', 'color'),
+    styleValue('lineHeight', 'lineHeight', function(size) {
+        var m = size.match(/^([\d\.]+)(pt|px)$/);
+        return m ? parseFloat(m[1]) : 10
+    ;}),
     styleValue('fontFamily', 'font', fontName),
     styleValue('fontSize', 'size', function(size) {
         var m = size.match(/^([\d\.]+)(pt|px)$/);
@@ -127,6 +134,11 @@ newLines.forEach(function(name) {
 
 exports.parse = function(html, classes) {
     var root = html;
+
+    if(!classes) {
+        classes = [];
+    }
+
     if (typeof root === 'string') {
         root = document.createElement('div');
         root.innerHTML = html;

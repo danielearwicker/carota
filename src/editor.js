@@ -2,6 +2,7 @@ var per = require('per');
 var carotaDoc = require('./doc');
 var dom = require('./dom');
 var rect = require('./rect');
+var runs = require("./runs");
 
 setInterval(function() {
     var editors = document.querySelectorAll('.carotaEditorCanvas');
@@ -17,11 +18,24 @@ setInterval(function() {
     }
 }, 200);
 
-exports.create = function(element) {
+exports.destroy = function(element) {
+    dom.clear(element);
+};
+
+exports.create = function(element, options) {
 
     // We need the host element to be a container:
     if (dom.effectiveStyle(element, 'position') !== 'absolute') {
         element.style.position = 'relative';
+    }
+
+    if(options && options.formatting) {
+        if(options.formatting.size) runs.defaultFormatting.size = options.formatting.size;
+        if(options.formatting.font) runs.defaultFormatting.font = options.formatting.font;
+        if(options.formatting.color) runs.defaultFormatting.color = options.formatting.color;
+        if(options.formatting.bold) runs.defaultFormatting.bold = options.formatting.bold;
+        if(options.formatting.italic) runs.defaultFormatting.italic = options.formatting.italic;
+        if(options.formatting.underline) runs.defaultFormatting.underline = options.formatting.underline;
     }
 
     element.innerHTML =
@@ -46,7 +60,7 @@ exports.create = function(element) {
         textAreaContent = '',
         richClipboard = null,
         plainClipboard = null;
-    
+
     var toggles = {
         66: 'bold',
         73: 'italic',
