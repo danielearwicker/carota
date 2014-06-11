@@ -3,8 +3,10 @@ var runs = require('./runs');
 /*  Returns a font CSS/Canvas string based on the settings in a run
  */
 var getFontString = exports.getFontString = function(run) {
-
     var size = (run && run.size) || runs.defaultFormatting.size;
+
+    //TODO: Need to figure out why this value is correct
+    size *= 0.75;
 
     if (run) {
         switch (run.script) {
@@ -64,7 +66,7 @@ var enter = exports.enter = nbsp; // String.fromCharCode(9166);
     part of the cost, and if we left the hidden measuring node in the DOM then it
     would affect the dimensions of the whole page.
  */
-var measureText = exports.measureText = function(text, style) {
+var measureText = exports.measureText = function(text, style, lineHeight) {
     var span, block, div;
 
     span = document.createElement('span');
@@ -87,16 +89,15 @@ var measureText = exports.measureText = function(text, style) {
     document.body.appendChild(div);
     try {
         span.setAttribute('style', style);
+        span.style.lineHeight = lineHeight + "pt";
 
         span.innerHTML = '';
         span.appendChild(document.createTextNode(text.replace(/\s/g, nbsp)));
 
         var result = {};
-        block.style.verticalAlign = 'baseline';
-        result.ascent = (block.offsetTop - span.offsetTop);
-        block.style.verticalAlign = 'bottom';
-        result.height = (block.offsetTop - span.offsetTop);
-        result.descent = result.height - result.ascent;
+        result.ascent = lineHeight / 2;
+        result.height = lineHeight;
+        result.descent = lineHeight / 2;
         result.width = span.offsetWidth;
     } finally {
         div.parentNode.removeChild(div);
@@ -124,11 +125,11 @@ var measureText = exports.measureText = function(text, style) {
 */
 var createCachedMeasureText = exports.createCachedMeasureText = function() {
     var cache = {};
-    return function(text, style) {
-        var key = style + '<>!&%' + text;
+    return function(text, style, lineHeight) {
+        var key = style + '<>!&%' + text + '<>!&%' + lineHeight;
         var result = cache[key];
         if (!result) {
-            cache[key] = result = measureText(text, style);
+            cache[key] = result = measureText(text, style, lineHeight);
         }
         return result;
     };
@@ -137,7 +138,13 @@ var createCachedMeasureText = exports.createCachedMeasureText = function() {
 exports.cachedMeasureText = createCachedMeasureText();
 
 exports.measure = function(str, formatting) {
-    return exports.cachedMeasureText(str, exports.getRunStyle(formatting));
+    var lineHeight;
+
+    if(formatting) {
+        lineHeight = formatting.lineHeight || formatting.size;
+    }
+
+    return exports.cachedMeasureText(str, exports.getRunStyle(formatting), lineHeight);
 };
 
 exports.draw = function(ctx, str, formatting, left, baseline, width, ascent, descent) {
@@ -151,6 +158,10 @@ exports.draw = function(ctx, str, formatting, left, baseline, width, ascent, des
             baseline += (descent / 2);
             break;
     }
+
+    //Set positioing to "middle" so that we can also set a lineHeight
+    ctx.textBaseline = "middle";
+
     ctx.fillText(str === '\n' ? exports.enter : str, left, baseline);
     if (formatting.underline) {
         ctx.fillRect(left, 1 + baseline, width, 1);

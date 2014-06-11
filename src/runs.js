@@ -1,4 +1,4 @@
-exports.formattingKeys = [ 'bold', 'italic', 'underline', 'strikeout', 'color', 'font', 'size', 'align', 'script' ];
+exports.formattingKeys = [ 'bold', 'italic', 'underline', 'strikeout', 'color', 'font', 'size', 'align', 'script', 'lineHeight' ];
 
 exports.defaultFormatting = {
     size: 10,

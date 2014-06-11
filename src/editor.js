@@ -295,15 +295,15 @@ exports.create = function(element) {
         var docHeight = doc.frame.bounds().h;
 
         var dpr = Math.max(1, window.devicePixelRatio || 1);
-        
+
         var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
             logicalHeight = element.clientHeight;
-        
+
         canvas.width = dpr * logicalWidth;
         canvas.height = dpr * logicalHeight;
         canvas.style.width = logicalWidth + 'px';
         canvas.style.height = logicalHeight + 'px';
-        
+
         canvas.style.top = element.scrollTop + 'px';
         spacer.style.width = logicalWidth + 'px';
         spacer.style.height = Math.max(docHeight, element.clientHeight) + 'px';
