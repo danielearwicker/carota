@@ -172,7 +172,7 @@ exports.parse = function(html, classes) {
                             formatting[key] = cls[key];
                         });
                     }
-                })
+                });
             }
 
             handlers.forEach(function(handler) {
