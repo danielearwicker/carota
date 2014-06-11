@@ -138,9 +138,9 @@ var createCachedMeasureText = exports.createCachedMeasureText = function() {
 exports.cachedMeasureText = createCachedMeasureText();
 
 exports.measure = function(str, formatting) {
-    var lineHeight;
+    var lineHeight = runs.defaultFormatting.size;
 
-    if(formatting) {
+    if(formatting && (formatting.lineHeight || formatting.size)) {
         lineHeight = formatting.lineHeight || formatting.size;
     }
 
