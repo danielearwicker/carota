@@ -9,6 +9,7 @@ var util = require('./util');
 var frame = require('./frame');
 var codes = require('./codes');
 var rect = require('./rect');
+var dom = require('./dom');
 
 var makeEditCommand = function(doc, start, count, words) {
     var selStart = doc.selection.start, selEnd = doc.selection.end;
@@ -451,6 +452,9 @@ var prototype = node.derive({
                 self.contentChanged.fire();
             }
         }
+    },
+    cleanupEvents: function() {
+        dom.cleanupEvents();
     },
     type: 'document'
 });

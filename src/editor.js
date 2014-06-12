@@ -18,10 +18,6 @@ setInterval(function() {
     }
 }, 200);
 
-exports.destroy = function(element) {
-    dom.clear(element);
-};
-
 exports.create = function(element, options) {
 
     // We need the host element to be a container:
@@ -45,7 +41,7 @@ exports.create = function(element, options) {
         '<div class="carotaTextArea" style="overflow: hidden; position: absolute; height: 0;">' +
             '<textarea autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="0" ' +
             'style="position: absolute; padding: 0px; width: 1000px; height: 1em; ' +
-            'outline: none; font-size: 4px;"></textarea>'
+            'outline: none; font-size: 4px;"></textarea>' +
         '</div>';
 
     var canvas = element.querySelector('canvas'),
@@ -296,7 +292,7 @@ exports.create = function(element, options) {
         if (handleKey(ev.keyCode, ev.shiftKey, ev.ctrlKey || ev.metaKey)) {
             return false;
         }
-        console.log(ev.which);
+        //console.log(ev.which);
     });
 
     var paint = function() {
@@ -472,5 +468,10 @@ exports.create = function(element, options) {
     update();
 
     doc.sendKey = handleKey;
+
+    doc.cleanup = function() {
+        dom.clear(element);
+    };
+
     return doc;
 };
