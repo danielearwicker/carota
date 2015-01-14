@@ -236,7 +236,7 @@ var prototype = node.derive({
                 .per(this.runs, this)
                 .first();
             text = [
-                Object.create(sampleRun, { text: { value: text } })
+                sampleRun ? Object.create(sampleRun, { text: { value: text } }) : { text: text }
             ];
         } else if (!Array.isArray(text)) {
             text = [{ text: text }];
