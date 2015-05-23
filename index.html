@@ -121,6 +121,11 @@
         <button id="smiley"><img src="smiley.png"></button>
         <button id="undo">Undo</button>
         <button id="redo">Redo</button>
+        <select id="valign">
+            <option value="top">Top</option>
+            <option value="middle">Middle</option>
+            <option value="bottom">Bottom</option>
+        </select>
     </div>
 
     <div id="exampleEditor"></div>
@@ -371,6 +376,11 @@
             });
         });
 
+        var valign = document.querySelector('#valign')
+        carota.dom.handleEvent(valign, 'change', function() {
+            exampleEditor.setVerticalAlignment(valign.value);
+        });
+        
         // We don't update the JSON view until half a second after the last change
         // to avoid slowing things down too much
         var persistenceTextArea = document.querySelector('#examplePersistence textarea');

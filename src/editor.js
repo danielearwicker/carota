@@ -285,6 +285,26 @@ exports.create = function(element) {
         console.log(ev.which);
     });
 
+    var verticalAlignment = 'top';
+    
+    doc.setVerticalAlignment = function(va) {
+        verticalAlignment = va;
+        paint();
+    }
+
+    function getVerticalOffset() {
+        var docHeight = doc.frame.bounds().h;
+        if (docHeight < element.clientHeight) { 
+            switch (verticalAlignment) {
+                case 'middle':
+                    return (element.clientHeight - docHeight) / 2;
+                case 'bottom':
+                    return element.clientHeight - docHeight;
+            }
+        }
+        return 0;
+    }
+
     var paint = function() {
 
         var availableWidth = element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!
@@ -319,7 +339,8 @@ exports.create = function(element) {
         ctx.scale(dpr, dpr);
 
         ctx.clearRect(0, 0, logicalWidth, logicalHeight);
-        ctx.translate(0, -element.scrollTop);
+        ctx.translate(0, getVerticalOffset() - element.scrollTop);
+        
         doc.draw(ctx, rect(0, element.scrollTop, logicalWidth, logicalHeight));
         doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
@@ -384,15 +405,19 @@ exports.create = function(element) {
         }
     });
 
-    dom.handleMouseEvent(spacer, 'mousedown', function(ev, x, y) {
-        var node = doc.byCoordinate(x, y);
+    function registerMouseEvent(name, handler) {
+        dom.handleMouseEvent(spacer, name, function(ev, x, y) {
+            handler(doc.byCoordinate(x, y - getVerticalOffset()));
+        });
+    }
+
+    registerMouseEvent('mousedown', function(node) {
         selectDragStart = node.ordinal;
         doc.select(node.ordinal, node.ordinal);
         keyboardX = null;
     });
 
-    dom.handleMouseEvent(spacer, 'dblclick', function(ev, x, y) {
-        var node = doc.byCoordinate(x, y);
+    registerMouseEvent('dblclick', function(node) {
         node = node.parent();
         if (node) {
             doc.select(node.ordinal, node.ordinal +
@@ -400,9 +425,8 @@ exports.create = function(element) {
         }
     });
 
-    dom.handleMouseEvent(spacer, 'mousemove', function(ev, x, y) {
+    registerMouseEvent('mousemove', function(node) {
         if (selectDragStart !== null) {
-            var node = doc.byCoordinate(x, y);
             if (node) {
                 focusChar = node.ordinal;
                 if (selectDragStart > node.ordinal) {
@@ -414,7 +438,7 @@ exports.create = function(element) {
         }
     });
 
-    dom.handleMouseEvent(spacer, 'mouseup', function(ev, x, y) {
+    registerMouseEvent('mouseup', function(node) {
         selectDragStart = null;
         keyboardX = null;
         updateTextArea();
