@@ -293,30 +293,47 @@ exports.create = function(element) {
     }
 
     function getVerticalOffset() {
-        var docHeight = doc.frame.bounds().h;
-        if (docHeight < element.clientHeight) { 
-            switch (verticalAlignment) {
-                case 'middle':
-                    return (element.clientHeight - docHeight) / 2;
-                case 'bottom':
-                    return element.clientHeight - docHeight;
+        if (doc.getPageLayout().type) {
+            return doc.getPageLayout().getFirstPageVerticalOffset() + doc.getPageLayout().getTopMargin();
+        } else {
+            var docHeight = doc.frame.bounds().h;
+            if (docHeight < element.clientHeight) {
+                switch (verticalAlignment) {
+                    case 'middle':
+                        return (element.clientHeight - docHeight) / 2;
+                    case 'bottom':
+                        return element.clientHeight - docHeight;
+                }
             }
+            return 0;
         }
-        return 0;
+    }
+
+    function getHorizontalOffset() {
+        if (doc.getPageLayout().type) {
+            return Math.max(Math.floor((element.clientWidth - doc.getPageLayout().getPageWidth()) / 2), 0) + doc.getPageLayout().getLeftMargin();
+        }
+        return 0; 
     }
 
     var paint = function() {
-
-        var availableWidth = element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!
+        
+        var pageLayout = doc.getPageLayout();
+        
+        var availableWidth = pageLayout.getTextWidth() || element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!
         if (doc.width() !== availableWidth) {
             doc.width(availableWidth);
         }
 
         var docHeight = doc.frame.bounds().h;
+        if (pageLayout.type) { 
+            //show whole page
+            docHeight = getTotalPages() * pageLayout.getPageHeightWithSpacer() + getVerticalOffset();
+        }
 
         var dpr = Math.max(1, window.devicePixelRatio || 1);
         
-        var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
+        var logicalWidth = Math.max(doc.frame.actualWidth() + doc.getPageLayout().getHorizontalMargins(), element.clientWidth),
             logicalHeight = element.clientHeight;
         
         canvas.width = dpr * logicalWidth;
@@ -339,10 +356,41 @@ exports.create = function(element) {
         ctx.scale(dpr, dpr);
 
         ctx.clearRect(0, 0, logicalWidth, logicalHeight);
-        ctx.translate(0, getVerticalOffset() - element.scrollTop);
+
+        if (pageLayout.type) {
+            drawPages(ctx, logicalWidth, logicalHeight);
+        }
+
+        ctx.translate(getHorizontalOffset(), getVerticalOffset() - element.scrollTop);
+        doc.draw(ctx, rect(0, element.scrollTop - getVerticalOffset(), logicalWidth, logicalHeight));
         
-        doc.draw(ctx, rect(0, element.scrollTop, logicalWidth, logicalHeight));
         doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
+    };
+
+    var getTotalPages = function(){
+        var existingSpace = 16,
+            realH = doc.frame.bounds().h - existingSpace;
+
+        return Math.floor(realH / doc.getPageLayout().getPageHeightWithSpacer()) + (Math.ceil(realH % doc.getPageLayout().getPageHeightWithSpacer()) ? 1 : 0);
+    }
+
+    var drawPages = function (ctx, logicalWidth, logicalHeight) {
+
+        var layout = doc.getPageLayout(),
+            totalPages = getTotalPages();
+
+        ctx.fillStyle = 'rgb(220,220,220)';
+        ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+        for (var i = 0; i < totalPages; ++i) {
+            var x = getHorizontalOffset() - layout.getLeftMargin();
+            var y = layout.getFirstPageVerticalOffset() + i * layout.getPageHeightWithSpacer() - element.scrollTop;
+            
+            ctx.fillStyle = "white";
+            ctx.fillRect(x, y, layout.getPageWidth(), layout.getPageHeight());
+            ctx.strokeStyle = "black";
+            ctx.strokeRect(x, y, layout.getPageWidth(), layout.getPageHeight());
+        }
     };
 
     dom.handleEvent(element, 'scroll', paint);
@@ -368,16 +416,16 @@ exports.create = function(element) {
             textAreaDiv.style.left = bounds.l + 'px';
             textAreaDiv.style.top = bounds.t + 'px';
             textArea.focus();
-            var scrollDownBy = Math.max(0, bounds.t + bounds.h -
+            var scrollDownBy = Math.max(0, bounds.t + bounds.h + doc.getPageLayout().getSpaceBeetweenPageTexts() -
                     (element.scrollTop + element.clientHeight));
             if (scrollDownBy) {
                 element.scrollTop += scrollDownBy;
             }
-            var scrollUpBy = Math.max(0, element.scrollTop - bounds.t);
+            var scrollUpBy = Math.max(0, element.scrollTop - bounds.t - doc.getPageLayout().getSpaceBeetweenPageTexts());
             if (scrollUpBy) {
                 element.scrollTop -= scrollUpBy;
             }
-            var scrollRightBy = Math.max(0, bounds.l -
+            var scrollRightBy = Math.max(0, bounds.l - 
                 (element.scrollLeft + element.clientWidth));
             if (scrollRightBy) {
                 element.scrollLeft += scrollRightBy;
@@ -391,7 +439,7 @@ exports.create = function(element) {
         textArea.value = textAreaContent;
         textArea.select();
 
-        setTimeout(function() {
+        setTimeout(function () {
             textArea.focus();
         }, 10);
     };
@@ -407,7 +455,7 @@ exports.create = function(element) {
 
     function registerMouseEvent(name, handler) {
         dom.handleMouseEvent(spacer, name, function(ev, x, y) {
-            handler(doc.byCoordinate(x, y - getVerticalOffset()));
+            handler(doc.byCoordinate(Math.max(x - getHorizontalOffset(), 0), y - getVerticalOffset()));
         });
     }
 

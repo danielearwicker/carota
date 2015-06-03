@@ -439,11 +439,109 @@ var prototype = node.derive({
             }
         }
     },
+    changePageLayout: function(layoutEnum){
+        this.pageLayout.configure(buildPageLayoutProperties(layoutEnum), layoutEnum);
+        this.contentChanged.fire();
+    },
+    
+    getPageLayout: function () {
+        return this.pageLayout;
+    },
+
     type: 'document'
 });
 
+var buildPageLayoutProperties = function (pageLayoutEnum) {
+
+    switch (pageLayoutEnum) {
+        case 'portrait':
+            return {
+                firstPageVerticalOffset: 60,
+                leftMargin: 60,
+                rightMargin: 60,
+                topMargin: 40,
+                bottomMargin: 40,
+                pageSpacer: 20,
+                textHeight: 585,
+                textWidth: 324,
+            };
+        case 'landscape':
+            return {
+                firstPageVerticalOffset: 60,
+                leftMargin: 60,
+                rightMargin: 60,
+                topMargin: 40,
+                bottomMargin: 40,
+                pageSpacer: 20,
+                textHeight: 324,
+                textWidth: 475,
+            };
+        default:
+            return {
+                firstPageVerticalOffset: 0,
+                leftMargin: 0,
+                rightMargin: 0,
+                topMargin: 0,
+                bottomMargin: 0,
+                pageSpacer: 0,
+                textHeight: 0,
+                textWidth: 0,
+            };
+    }
+}
+
+var pageLayoutPrototype = {
+    layoutProperties: buildPageLayoutProperties(),
+
+    configure: function (layoutProperties, layoutTypeEnum) {
+        this.type = layoutTypeEnum;
+        this.layoutProperties = layoutProperties;
+    },
+
+    getTextHeight: function () {
+        return this.layoutProperties.textHeight;
+    },
+
+    getTextWidth: function () {
+        return this.layoutProperties.textWidth;
+    },
+
+    getPageHeight: function () {
+        return this.layoutProperties.topMargin + this.layoutProperties.textHeight + this.layoutProperties.bottomMargin;
+    },
+
+    getPageHeightWithSpacer: function () {
+        return this.getPageHeight() + this.layoutProperties.pageSpacer;
+    },
+
+    getPageWidth: function () {
+        return this.layoutProperties.leftMargin + this.getTextWidth() + this.layoutProperties.rightMargin;
+    },
+
+    getSpaceBeetweenPageTexts: function () {
+        return this.layoutProperties.bottomMargin + this.layoutProperties.pageSpacer + this.layoutProperties.topMargin;
+    },
+
+    getTopMargin: function () {
+        return this.layoutProperties.topMargin;
+    },
+
+    getLeftMargin: function () {
+        return this.layoutProperties.leftMargin;
+    },
+
+    getHorizontalMargins: function () {
+        return this.layoutProperties.leftMargin + this.layoutProperties.rightMargin;
+    },
+
+    getFirstPageVerticalOffset: function () {
+        return this.layoutProperties.firstPageVerticalOffset;
+    },
+}
+
 exports = module.exports = function() {
     var doc = Object.create(prototype);
+    doc.pageLayout = Object.create(pageLayoutPrototype);
     doc._width = 0;
     doc.selection = { start: 0, end: 0 };
     doc.caretVisible = true;
