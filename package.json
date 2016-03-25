@@ -12,7 +12,7 @@
         "prepublish": "node make"
     },
     "dependencies": {
-        "per": ">=0.0.1"
+        "per": "0.1.7"
     },
     "devDependencies": {
       "webmake": ">=0.3.19",
