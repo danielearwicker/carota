@@ -38,7 +38,19 @@ module.exports = function(left, top, width, ordinal, parent,
         var l = line(parent, left, width, y + maxAscent, maxAscent, maxDescent, lineBuffer, ordinal);
         ordinal += l.length;
         quit = emit(l);
-        y += (maxAscent + maxDescent);
+        var step = maxAscent + maxDescent;
+        y += step;
+
+        var pageLayout = parent.parent().getPageLayout();
+        if (pageLayout.type) {
+            var offset = (y + step) % pageLayout.getPageHeightWithSpacer();
+            if (offset >= pageLayout.getTextHeight()) {
+                //set y at the begining of next page
+                var totalPages = Math.floor(y / pageLayout.getPageHeightWithSpacer()) + 1;
+                y = totalPages * pageLayout.getPageHeightWithSpacer();
+            }
+        }
+
         lineBuffer.length = 0;
         lineWidth = maxAscent = maxDescent = 0;
     };
