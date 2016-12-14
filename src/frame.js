@@ -11,12 +11,14 @@ var prototype = node.derive({
                 left = first.l;
                 top = first.t;
                 this.lines.forEach(function(line) {
-                    var b = line.bounds();
-                    right = Math.max(right, b.l + b.w);
-                    bottom = Math.max(bottom, b.t + b.h);
+                    if(line.actualWidth > 0) {
+                        var b = line.bounds();
+                        right = Math.max(right, b.l + b.w);
+                        bottom = Math.max(bottom, b.t + b.h);
+                    }
                 });
             }
-            this._bounds = rect(left, top, right - left, this.height || bottom - top);
+            this._bounds = rect(left, top, right - left, bottom - top);
         }
         return this._bounds;
     },

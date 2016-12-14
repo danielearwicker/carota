@@ -9,6 +9,7 @@ var util = require('./util');
 var frame = require('./frame');
 var codes = require('./codes');
 var rect = require('./rect');
+var dom = require('./dom');
 
 var makeEditCommand = function(doc, start, count, words) {
     var selStart = doc.selection.start, selEnd = doc.selection.end;
@@ -92,24 +93,33 @@ var prototype = node.derive({
         // find the character after the nearest breaker before start
         var startInfo = this.wordContainingOrdinal(start);
         start = 0;
-        if (startInfo && !isBreaker(startInfo.word)) {
-            for (i = startInfo.index; i > 0; i--) {
-                if (isBreaker(this.words[i - 1])) {
-                    start = this.wordOrdinal(i);
-                    break;
+        if (startInfo) {
+
+            if(!isBreaker(startInfo.word)) {
+                for (i = startInfo.index; i > 0; i--) {
+                    if (isBreaker(this.words[i - 1])) {
+                        start = this.wordOrdinal(i);
+                        break;
+                    }
                 }
+            } else {
+                start = startInfo.ordinal;
             }
         }
 
         // find the nearest breaker after end
         var endInfo = this.wordContainingOrdinal(end);
         end = this.frame.length - 1;
-        if (endInfo && !isBreaker(endInfo.word)) {
-            for (i = endInfo.index; i < this.words.length; i++) {
-                if (isBreaker(this.words[i])) {
-                    end = this.wordOrdinal(i);
-                    break;
+        if (endInfo) {
+            if(!isBreaker(endInfo.word)) {
+                for (i = endInfo.index; i < this.words.length; i++) {
+                    if (isBreaker(this.words[i])) {
+                        end = this.wordOrdinal(i);
+                        break;
+                    }
                 }
+            } else {
+                end = endInfo.ordinal;
             }
         }
 
@@ -235,6 +245,10 @@ var prototype = node.derive({
             var sampleRun = per({ start: sample, end: sample + 1 })
                 .per(this.runs, this)
                 .first();
+            if (!sampleRun) {
+                sampleRun = { text: text };
+            }
+
             text = [
                 sampleRun ? Object.create(sampleRun, { text: { value: text } }) : { text: text }
             ];
@@ -438,6 +452,9 @@ var prototype = node.derive({
                 self.contentChanged.fire();
             }
         }
+    },
+    cleanupEvents: function() {
+        dom.cleanupEvents();
     },
     type: 'document'
 });
