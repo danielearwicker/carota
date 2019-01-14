@@ -48,7 +48,7 @@ var prototype = {
     },
     align: function() {
         var first = this.text.parts[0];
-        return first ? first.run.align : 'left';
+        return ( first && first.run.align ) ? first.run.align : runs.defaultFormatting.align;
     },
     runs: function(emit, range) {
         var start = range && range.start || 0,
