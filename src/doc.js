@@ -456,5 +456,8 @@ exports = module.exports = function() {
     doc.contentChanged = util.event();
     doc.editFilters = [codes.editFilter];
     doc.load([]);
+    doc.setDefaultStyles = function( val ){
+        runs.defaultFormatting = val;
+    }
     return doc;
 };
