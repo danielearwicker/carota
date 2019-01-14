@@ -29,7 +29,7 @@ exports.applyRunStyle = function(ctx, run) {
 };
 
 exports.prepareContext = function(ctx) {
-    ctx.textAlign = 'left';
+    ctx.textAlign = runs.defaultFormatting.align;
     ctx.textBaseline = 'alphabetic';
 };
 
