@@ -193,3 +193,42 @@ exports.parse = function(html, classes) {
     return result;
 };
 
+exports.html = function( texts ) {
+    return texts.map( obj => {
+        var span = document.createElement( 'span' );
+        Object.keys(obj).forEach(function(k, i) {
+            if ( k === 'text' ) {
+                var brAdded = obj[ k ].replace(/\n/g, '<br>');
+                span.innerHTML = brAdded;
+            }  
+            if ( k === 'bold' ) {            
+                span.style.fontWeight = obj[ k ] ? 'bold' : 'normal';
+            }
+            if ( k === 'italic' ) {            
+                span.style.fontStyle = obj[ k ] ? 'italic' : 'normal';
+            }
+            if ( k === 'strikeout' ) {            
+                span.style.textDecoration = obj[ k ] ? 'line-through' : 'normal';
+            }
+            if ( k === 'underline' ) {            
+                span.style.textDecoration = obj[ k ] ? 'underline' : 'normal';
+            }
+            if ( k === 'color' ) {            
+                span.style.color = obj[ k ];
+            }
+            if ( k === 'font' ) {            
+                span.style.fontFamily = obj[ k ];
+            }
+            if ( k === 'size' ) {            
+                span.style.fontSize = obj[ k ] + 'pt';
+            }
+            if ( k === 'textAlign' ) {            
+                span.style.textAlign = obj[ k ];
+            }
+            if ( k === 'script'  ) {            
+                span.style.verticalAlign = obj[ k ];
+            }
+        });
+        return span.outerHTML;
+    }).join('');
+}
