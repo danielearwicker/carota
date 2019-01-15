@@ -454,6 +454,9 @@ exports.create = function(element) {
         var requirePaint = false;
         var newFocused = document.activeElement === textArea;
         if (focused !== newFocused) {
+            if ( !newFocused ) {
+                canvas.dispatchEvent( new Event( 'blur' ));
+            }
             focused = newFocused;
             requirePaint = true;
         }
