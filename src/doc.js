@@ -1,3 +1,4 @@
+var html = require('./html');
 var per = require('per');
 var characters = require('./characters');
 var split = require('./split');
@@ -46,7 +47,29 @@ var isBreaker = function(word) {
 };
 
 var prototype = node.derive({
-    load: function(runs, takeFocus) {
+    load: function(value, takeFocus) {
+        var runs;
+        if ( value === '' ) {
+            runs = [{ text: '' }];
+        } else if( typeof value === 'string' ) {
+            runs = html.parse( value );
+            /**
+             * FIXME - The carota html parser adds an aditional new line element
+             * for P tags and also adds a newline to the last text value depending on the
+             * html string.
+             * <p>hi</p>   ->  [{ text: 'hi/n' }]
+             * <p><span>hi</span></p><p><span>hi</span></p>   ->  [{ text: 'hi' }, { text: '\n' }],[{ text: 'hi' }, { text: '\n' }]
+             */
+            var last = runs[ runs.length  - 1 ];
+            if ( last.text === '\n'  ) {
+                runs.splice( -1, 1 );
+            }
+            last = runs[ runs.length  - 1 ];
+            last.text = last.text.trimRight();
+        } else {
+            runs = value;
+        }
+
         var self = this;
         this.undo = [];
         this.redo = [];
@@ -397,6 +420,12 @@ var prototype = node.derive({
             altering the formatting)
         */
         this.notifySelectionChanged(takeFocus);
+    },
+    selectAll: function(){
+        this.select( 0, this.frame.length - 1, true );
+    },
+    moveCaretToEnd: function(){
+        this.select( this.frame.length - 1, this.frame.length - 1, true );
     },
     performUndo: function(redo) {
         var fromStack = redo ? this.redo : this.undo,

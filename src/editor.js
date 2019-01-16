@@ -26,7 +26,7 @@ exports.create = function(element) {
 
     element.innerHTML =
         '<div class="carotaSpacer">' +
-            '<canvas width="100" height="100" class="carotaEditorCanvas" style="position: absolute;"></canvas>' +
+            '<canvas width="100" height="100" class="carotaEditorCanvas" ></canvas>' +
         '</div>' +
         '<div class="carotaTextArea" style="overflow: hidden; position: absolute; height: 0;">' +
             '<textarea autocorrect="off" autocapitalize="off" spellcheck="false" tabindex="0" ' +
@@ -390,7 +390,7 @@ exports.create = function(element) {
         textAreaContent = doc.selectedRange().plainText();
         textArea.value = textAreaContent;
         textArea.select();
-
+        canvas.dispatchEvent( new Event( 'content-update' ));
         setTimeout(function() {
             textArea.focus();
         }, 10);
@@ -454,6 +454,9 @@ exports.create = function(element) {
         var requirePaint = false;
         var newFocused = document.activeElement === textArea;
         if (focused !== newFocused) {
+            if ( !newFocused ) {
+                canvas.dispatchEvent( new Event( 'blur' ));
+            }
             focused = newFocused;
             requirePaint = true;
         }
@@ -482,5 +485,7 @@ exports.create = function(element) {
     update();
 
     doc.sendKey = handleKey;
+    doc.canvas = canvas;
+    doc.textArea = textArea;
     return doc;
 };
