@@ -64,8 +64,12 @@ var prototype = node.derive({
             if ( last.text === '\n'  ) {
                 runs.splice( -1, 1 );
             }
-            last = runs[ runs.length  - 1 ];
-            last.text = last.text.trimRight();
+            if ( runs.length > 0 ) {
+                last = runs[ runs.length  - 1 ];
+                if ( last.text ) {
+                    last.text = last.text.trimRight();
+                }
+            }
         } else {
             runs = value;
         }
