@@ -305,6 +305,8 @@ exports.create = function(element) {
         return 0;
     }
 
+    var currentZoomLevel = 1;
+
     var paint = function() {
 
         var availableWidth = element.clientWidth * 1; // adjust to 0.5 to see if we draw in the wrong places!
@@ -319,8 +321,8 @@ exports.create = function(element) {
         var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
             logicalHeight = element.clientHeight;
         
-        canvas.width = dpr * logicalWidth;
-        canvas.height = dpr * logicalHeight;
+        canvas.width = dpr * logicalWidth * currentZoomLevel;
+        canvas.height = dpr * logicalHeight * currentZoomLevel;
         canvas.style.width = logicalWidth + 'px';
         canvas.style.height = logicalHeight + 'px';
         
@@ -336,7 +338,7 @@ exports.create = function(element) {
         }
 
         var ctx = canvas.getContext('2d');
-        ctx.scale(dpr, dpr);
+        ctx.scale(dpr * currentZoomLevel , dpr * currentZoomLevel );
 
         ctx.clearRect(0, 0, logicalWidth, logicalHeight);
         ctx.translate(0, getVerticalOffset() - element.scrollTop);
@@ -487,5 +489,6 @@ exports.create = function(element) {
     doc.sendKey = handleKey;
     doc.canvas = canvas;
     doc.textArea = textArea;
+    doc.setZoomLevel = function( level ){ currentZoomLevel = level };
     return doc;
 };
