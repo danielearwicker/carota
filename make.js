@@ -3,9 +3,9 @@ var minify = require('node-minify');
 
 webmake('src/carota.js', { output: 'carota-debug.js' }, function(result) {
     if (!result) {
-        console.log('All good');
+        // console.log('All good');
     } else {
-        console.log(result);
+        // console.log(result);
     }
 });
 
