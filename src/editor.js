@@ -408,7 +408,9 @@ exports.create = function(element) {
     });
 
     function registerMouseEvent(name, handler) {
-        dom.handleMouseEvent(spacer, name, function(ev, x, y) {
+        dom.handleMouseEvent(spacer, name, function(ev, clientX, clientY, left, top) {
+            var x = clientX / currentZoomLevel - left;
+            var y = clientY / currentZoomLevel - top;
             handler(doc.byCoordinate(x, y - getVerticalOffset()));
         });
     }
