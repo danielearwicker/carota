@@ -458,7 +458,7 @@ exports.create = function(element) {
         var requirePaint = false;
         var newFocused = document.activeElement === textArea;
         if (focused !== newFocused) {
-            if ( !newFocused ) {
+            if ( !newFocused && !selectDragStart ) {
                 canvas.dispatchEvent( new Event( 'blur' ));
             }
             focused = newFocused;
