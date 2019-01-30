@@ -207,8 +207,11 @@ exports.html = function( texts ) {
             if ( k === 'italic' ) {            
                 span.style.fontStyle = obj[ k ] ? 'italic' : 'normal';
             }
-            if ( k === 'strikeout' ) {            
-                span.style.textDecoration = obj[ k ] ? 'line-through' : 'normal';
+            if ( k === 'strikeout' ) {
+                var del = document.createElement( 'del' ); // textDecoration used for underline, can't use together
+                del.innerHTML = span.innerHTML;
+                span.innerHTML = '';          
+                span.appendChild( del );
             }
             if ( k === 'underline' ) {            
                 span.style.textDecoration = obj[ k ] ? 'underline' : 'normal';
