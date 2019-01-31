@@ -200,15 +200,13 @@ exports.html = function( texts ) {
             if ( k === 'text' ) {
                 var brAdded = obj[ k ].replace(/\n/g, '<br>');
                 span.innerHTML = brAdded;
-            }  
+            }
+            console.log( 'span.innerHTML', span.innerHTML );  
             if ( k === 'bold' ) {            
                 span.style.fontWeight = obj[ k ] ? 'bold' : 'normal';
             }
             if ( k === 'italic' ) {            
                 span.style.fontStyle = obj[ k ] ? 'italic' : 'normal';
-            }
-            if ( k === 'strikeout' ) {
-                span.innerHTML = '<del>' + span.innerHTML + '</del>';          
             }
             if ( k === 'underline' ) {            
                 span.style.textDecoration = obj[ k ] ? 'underline' : 'normal';
@@ -229,6 +227,9 @@ exports.html = function( texts ) {
                 span.style.verticalAlign = obj[ k ];
             }
         });
+        if ( obj.strikeout ) {
+            span.innerHTML = '<del>' + span.innerHTML + '</del>';          
+        }
         return span.outerHTML;
     }).join('');
 }
