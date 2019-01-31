@@ -201,7 +201,6 @@ exports.html = function( texts ) {
                 var brAdded = obj[ k ].replace(/\n/g, '<br>');
                 span.innerHTML = brAdded;
             }
-            console.log( 'span.innerHTML', span.innerHTML );  
             if ( k === 'bold' ) {            
                 span.style.fontWeight = obj[ k ] ? 'bold' : 'normal';
             }
