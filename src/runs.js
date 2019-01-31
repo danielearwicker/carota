@@ -19,7 +19,12 @@ exports.sameFormatting = function(run1, run2) {
 };
 
 exports.clone = function(run) {
-    var result = { text: run.text };
+    var result = {
+        text: run.text,
+        color: exports.defaultFormatting.color,
+        size: exports.defaultFormatting.size,
+        font: exports.defaultFormatting.font,
+    };
     exports.formattingKeys.forEach(function(key) {
         var val = run[key];
         if (val && val != exports.defaultFormatting[key]) {

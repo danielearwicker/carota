@@ -2,23 +2,25 @@
   "name": "@creately/carota",
   "author": "Daniel Earwicker (dan@earwicker.com)",
   "description": "Simple, flexible rich text rendering/editing on HTML Canvas",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/danielearwicker/carota.git"
   },
   "main": "src/carota.js",
   "scripts": {
-    "prepublish": "node make"
+    "prepublish": "node make",
+    "test": "jest"
   },
   "dependencies": {
     "per": "0.1.7"
   },
   "devDependencies": {
-    "webmake": ">=0.3.19",
-    "node-minify": ">=0.8.1",
     "express": "3.3.4",
-    "uglifyjs": "^2.4.10"
+    "jest": "^24.0.0",
+    "node-minify": ">=0.8.1",
+    "uglifyjs": "^2.4.10",
+    "webmake": ">=0.3.19"
   },
   "license": "MIT"
 }
