@@ -35,8 +35,8 @@ Range.prototype.clear = function() {
     return this.setText([]);
 };
 
-Range.prototype.setText = function(text) {
-    return this.doc.splice(this.start, this.end, text);
+Range.prototype.setText = function(text, takeFocus) {
+    return this.doc.splice(this.start, this.end, text, takeFocus);
 };
 
 Range.prototype.runs = function(emit) {
@@ -66,20 +66,20 @@ Range.prototype.getFormatting = function() {
     return per(range.runs, range).reduce(runs.merge).last() || runs.defaultFormatting;
 };
 
-Range.prototype.setFormatting = function(attribute, value) {
+Range.prototype.setFormatting = function(attribute, value, takeFocus = true ) {
     var range = this;
     if (attribute === 'align') {
         // Special case: expand selection to surrounding paragraphs
         range = range.doc.paragraphRange(range.start, range.end);
     }
     if (range.start === range.end) {
-        range.doc.modifyInsertFormatting(attribute, value);
+        range.doc.modifyInsertFormatting(attribute, value, takeFocus);
     } else {
         var saved = range.save();
         var template = {};
         template[attribute] = value;
         runs.format(saved, template);
-        range.setText(saved);
+        range.setText(saved, takeFocus);
     }
 };
 
