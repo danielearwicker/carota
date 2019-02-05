@@ -85,7 +85,7 @@ var prototype = node.derive({
         this.contentChanged.fire();
         this.select(0, 0, takeFocus);
     },
-    layout: function() {
+    layout: function(takeFocus) {
         this.frame = null;
         try {
             this.frame = per(this.words).per(frame(0, 0, this._width, 0, this)).first();
@@ -98,7 +98,7 @@ var prototype = node.derive({
         } else if (this._nextSelection) {
             var next = this._nextSelection;
             delete this._nextSelection;
-            this.select(next.start, next.end);
+            this.select(next.start, next.end,takeFocus);
         }
     },
     range: function(start, end) {
@@ -145,9 +145,9 @@ var prototype = node.derive({
     insert: function(text, takeFocus) {
         this.select(this.selection.end + this.selectedRange().setText(text), null, takeFocus);
     },
-    modifyInsertFormatting: function(attribute, value) {
+    modifyInsertFormatting: function(attribute, value, takeFocus) {
         this.nextInsertFormatting[attribute] = value;
-        this.notifySelectionChanged();
+        this.notifySelectionChanged(takeFocus);
     },
     applyInsertFormatting: function(text) {
         var formatting = this.nextInsertFormatting;
@@ -207,7 +207,7 @@ var prototype = node.derive({
             endDetails.word.runs(emit, { end: endDetails.offset });
         }
     },
-    spliceWordsWithRuns: function(wordIndex, count, runs) {
+    spliceWordsWithRuns: function(wordIndex, count, runs, takeFocus) {
         var self = this;
 
         var newWords = per(characters(runs))
@@ -254,9 +254,9 @@ var prototype = node.derive({
                     delete self._filtersRunning;
                 }
             }
-        });
+        }, takeFocus);
     },
-    splice: function(start, end, text) {
+    splice: function(start, end, text, takeFocus) {
         if (typeof text === 'string') {
             var sample = Math.max(0, start - 1);
             var sampleRun = per({ start: sample, end: sample + 1 })
@@ -306,7 +306,7 @@ var prototype = node.derive({
         var oldLength = this.frame.length;
 
         this.spliceWordsWithRuns(startWord.index, (endWord.index - startWord.index) + 1,
-            per(prefix).concat(text).concat(suffix).per(runs.consolidate()).all());
+            per(prefix).concat(text).concat(suffix).per(runs.consolidate()).all(), takeFocus);
 
         return this.frame ? (this.frame.length - oldLength) : 0;
     },
@@ -447,7 +447,7 @@ var prototype = node.derive({
     canUndo: function(redo) {
         return redo ? !!this.redo.length : !!this.undo.length;
     },
-    transaction: function(perform) {
+    transaction: function(perform, takeFocus) {
         if (this._currentTransaction) {
             perform(this._currentTransaction);
         } else {
@@ -467,7 +467,7 @@ var prototype = node.derive({
                 }
             }));
             if (changed) {
-                self.layout();
+                self.layout(takeFocus);
                 self.contentChanged.fire();
             }
         }
