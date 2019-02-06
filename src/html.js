@@ -219,7 +219,7 @@ exports.html = function( texts ) {
             if ( k === 'size' ) {            
                 span.style.fontSize = obj[ k ] + 'pt';
             }
-            if ( k === 'textAlign' ) {            
+            if ( k === 'align' ) {            
                 span.style.textAlign = obj[ k ];
             }
             if ( k === 'script'  ) {            
