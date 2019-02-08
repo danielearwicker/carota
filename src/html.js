@@ -198,7 +198,7 @@ exports.html = function( texts ) {
         var span = document.createElement( 'span' );
         Object.keys(obj).forEach(function(k, i) {
             if ( k === 'text' ) {
-                var brAdded = obj[ k ].replace(/\n/g, '<br>');
+                var brAdded = obj[ k ].replace(/\n/g, '<br/>');
                 span.innerHTML = brAdded;
             }
             if ( k === 'bold' ) {            
