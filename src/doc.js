@@ -260,6 +260,16 @@ var prototype = node.derive({
         }, takeFocus);
     },
     splice: function(start, end, text, takeFocus) {
+
+        // This if block added to fix the carota editor new line caret position is
+        // not in accordance with the text alignment
+        if ( this.words.length > 1 ) {
+            var last = this.words[ this.words.length - 1 ];
+            if ( last.text.plainText === '\n' && !last.text.parts[0].run.align ) {
+                last.text.parts[0].run.align = this.words[ this.words.length - 2 ].text.parts[0].run.align;
+            }
+        }
+
         if (typeof text === 'string') {
             var sample = Math.max(0, start - 1);
             var sampleRun = per({ start: sample, end: sample + 1 })
