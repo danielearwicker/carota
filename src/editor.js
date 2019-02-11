@@ -17,7 +17,7 @@ setInterval(function() {
     }
 }, 200);
 
-exports.create = function(element) {
+exports.create = function(element, defaultFormatting) {
 
     // We need the host element to be a container:
     if (dom.effectiveStyle(element, 'position') !== 'absolute') {
@@ -38,7 +38,7 @@ exports.create = function(element) {
         spacer = element.querySelector('.carotaSpacer'),
         textAreaDiv = element.querySelector('.carotaTextArea'),
         textArea = element.querySelector('textarea'),
-        doc = carotaDoc(),
+        doc = carotaDoc( defaultFormatting ),
         keyboardSelect = 0,
         keyboardX = null, nextKeyboardX = null,
         selectDragStart = null,
