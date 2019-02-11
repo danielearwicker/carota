@@ -48,7 +48,7 @@ Range.prototype.plainText = function() {
 };
 
 Range.prototype.save = function() {
-    return per(this.runs, this).per(runs.consolidate()).all();
+    return per(this.runs, this).per(runs.consolidate( this.doc.defaultFormatting )).all();
 };
 
 Range.prototype.getFormatting = function() {
@@ -63,7 +63,7 @@ Range.prototype.getFormatting = function() {
         range.start = pos;
         range.end = pos + 1;
     }
-    return per(range.runs, range).reduce(runs.merge).last() || runs.defaultFormatting;
+    return per(range.runs, range).reduce(runs.merge).last() || range.doc.defaultFormatting;
 };
 
 Range.prototype.setFormatting = function(attribute, value, takeFocus = true ) {

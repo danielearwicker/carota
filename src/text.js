@@ -4,7 +4,7 @@ var runs = require('./runs');
  */
 var getFontString = exports.getFontString = function(run) {
 
-    var size = (run && run.size) || runs.defaultFormatting.size;
+    var size = (run && run.size);
 
     if (run) {
         switch (run.script) {
@@ -18,13 +18,13 @@ var getFontString = exports.getFontString = function(run) {
     return (run && run.italic ? 'italic ' : '') +
            (run && run.bold ? 'bold ' : '') + ' ' +
             size + 'pt ' +
-          ((run && run.font) || runs.defaultFormatting.font);
+          ((run && run.font));
 };
 
 /*  Applies the style of a run to the canvas context
  */
 exports.applyRunStyle = function(ctx, run) {
-    ctx.fillStyle = (run && run.color) || runs.defaultFormatting.color;
+    ctx.fillStyle = (run && run.color);
     ctx.font = getFontString(run);
 };
 
@@ -38,7 +38,7 @@ exports.prepareContext = function(ctx) {
 exports.getRunStyle = function(run) {
     var parts = [
         'font: ', getFontString(run),
-      '; color: ', ((run && run.color) || runs.defaultFormatting.color)
+      '; color: ', ((run && run.color))
     ];
 
     if (run) {

@@ -48,7 +48,7 @@ var prototype = {
     },
     align: function() {
         var first = this.text.parts[0];
-        return ( first && first.run.align ) ? first.run.align : runs.defaultFormatting.align;
+        return ( first && first.run.align ) ? first.run.align : this.defaultFormatting.align;
     },
     runs: function(emit, range) {
         var start = range && range.start || 0,
@@ -109,7 +109,7 @@ var section = function(runEmitter, codes) {
     return s;
 };
 
-module.exports = function(coords, codes) {
+module.exports = function( defaultFormatting, coords, codes) {
     var text, space;
     if (!coords) {
         // special end-of-document marker, mostly like a newline with no formatting
@@ -129,6 +129,7 @@ module.exports = function(coords, codes) {
         width: { value: text.width + space.width, configurable: true },
         length: { value: text.length + space.length }
     });
+    word.defaultFormatting = defaultFormatting;
     if (!coords) {
         Object.defineProperty(word, 'eof', { value: true });
     }

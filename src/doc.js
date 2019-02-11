@@ -48,11 +48,14 @@ var isBreaker = function(word) {
 
 var prototype = node.derive({
     load: function(value, takeFocus) {
+        if ( !this.defaultFormatting ) {
+            throw new Error( 'defaultFormatting for carota editor is not set' );
+        }
         var runs;
         if ( value === '' ) {
             runs = [{ text: '' }];
         } else if( typeof value === 'string' ) {
-            runs = html.parse( value );
+            runs = html.parse( value, this.defaultFormatting );
             /**
              * FIXME - The carota html parser adds an aditional new line element
              * for P tags and also adds a newline to the last text value depending on the
@@ -79,7 +82,7 @@ var prototype = node.derive({
         this.redo = [];
         this._wordOrdinals = [];
         this.words = per(characters(runs)).per(split(self.codes)).map(function(w) {
-            return word(w, self.codes);
+            return word( self.defaultFormatting, w, self.codes);
         }).all();
         this.layout();
         this.contentChanged.fire();
@@ -214,7 +217,7 @@ var prototype = node.derive({
             .per(split(self.codes))
             .truthy()
             .map(function(w) {
-                return word(w, self.codes);
+                return word( self.defaultFormatting, w, self.codes);
             })
             .all();
 
@@ -306,7 +309,7 @@ var prototype = node.derive({
         var oldLength = this.frame.length;
 
         this.spliceWordsWithRuns(startWord.index, (endWord.index - startWord.index) + 1,
-            per(prefix).concat(text).concat(suffix).per(runs.consolidate()).all(), takeFocus);
+            per(prefix).concat(text).concat(suffix).per(runs.consolidate( this.defaultFormatting )).all(), takeFocus);
 
         return this.frame ? (this.frame.length - oldLength) : 0;
     },
@@ -475,8 +478,9 @@ var prototype = node.derive({
     type: 'document'
 });
 
-exports = module.exports = function() {
+exports = module.exports = function( defaultFormatting ) {
     var doc = Object.create(prototype);
+    doc.defaultFormatting = defaultFormatting;
     doc._width = 0;
     doc.selection = { start: 0, end: 0 };
     doc.caretVisible = true;
@@ -490,7 +494,7 @@ exports = module.exports = function() {
     doc.editFilters = [codes.editFilter];
     doc.load([]);
     doc.setDefaultStyles = function( val ){
-        runs.defaultFormatting = val;
+        doc.defaultFormatting = val;
     }
     return doc;
 };

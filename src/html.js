@@ -125,7 +125,7 @@ newLines.forEach(function(name) {
     isNewLine[name] = true;
 });
 
-exports.parse = function(html, classes) {
+exports.parse = function(html, defaultFormatting, classes) {
     var root = html;
     if (typeof root === 'string') {
         root = document.createElement('div');
@@ -133,7 +133,7 @@ exports.parse = function(html, classes) {
     }
 
     var result = [], inSpace = true;
-    var cons = per(runs.consolidate()).into(result);
+    var cons = per(runs.consolidate( defaultFormatting )).into(result);
     var emit = function(text, formatting) {
         cons.submit(Object.create(formatting, {
             text: { value: text }

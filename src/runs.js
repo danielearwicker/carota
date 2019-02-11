@@ -1,33 +1,27 @@
 exports.formattingKeys = [ 'bold', 'italic', 'underline', 'strikeout', 'color', 'font', 'size', 'align', 'script' ];
 
-exports.defaultFormatting = {
-    size: 10,
-    font: 'sans-serif',
-    color: 'black',
-    bold: false,
-    italic: false,
-    underline: false,
-    strikeout: false,
-    align: 'left',
-    script: 'normal'
-};
-
 exports.sameFormatting = function(run1, run2) {
     return exports.formattingKeys.every(function(key) {
         return run1[key] === run2[key];
     })
 };
 
-exports.clone = function(run) {
+exports.clone = function(run, defaultFormatting) {
     var result = {
         text: run.text,
-        color: exports.defaultFormatting.color,
-        size: exports.defaultFormatting.size,
-        font: exports.defaultFormatting.font,
+        color: defaultFormatting.color,
+        size: defaultFormatting.size,
+        font: defaultFormatting.font,
+        align: defaultFormatting.align,
+        bold: defaultFormatting.bold,
+        italic: defaultFormatting.italic,
+        underline: defaultFormatting.underline,
+        strikeout: defaultFormatting.strikeout,
+        script: defaultFormatting.script,
     };
     exports.formattingKeys.forEach(function(key) {
         var val = run[key];
-        if (val && val != exports.defaultFormatting[key]) {
+        if (val && val != defaultFormatting[key]) {
             result[key] = val;
         }
     });
@@ -70,13 +64,13 @@ exports.format = function(run, template) {
     }
 };
 
-exports.consolidate = function() {
+exports.consolidate = function( defaultFormatting ) {
     var current;
     return function (emit, run) {
         if (!current || !exports.sameFormatting(current, run) ||
             (typeof current.text != 'string') ||
             (typeof run.text != 'string')) {
-            current = exports.clone(run);
+            current = exports.clone(run , defaultFormatting );
             emit(current);
         } else {
             current.text += run.text;
