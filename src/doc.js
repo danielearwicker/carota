@@ -15,6 +15,15 @@ var makeEditCommand = function(doc, start, count, words) {
     var selStart = doc.selection.start, selEnd = doc.selection.end;
     return function(log) {
         doc._wordOrdinals = [];
+        // This if block added to fix the carota editor new line caret position is
+        // not in accordance with the text alignment
+        if ( doc.words.length > 1 ) {
+            var last = doc.words[ doc.words.length - 1 ];
+            if ( last.text.plainText === '\n' && !last.text.parts[0].run.align ) {
+                last.text.parts[0].run.align = doc.words[ doc.words.length - 2 ].text.parts[0].run.align;
+            }
+        }
+
         var oldWords = Array.prototype.splice.apply(doc.words, [start, count].concat(words));
         log(makeEditCommand(doc, start, words.length, oldWords));
         doc._nextSelection = { start: selStart, end: selEnd };
