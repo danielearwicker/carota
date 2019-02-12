@@ -130,6 +130,10 @@ var htmlParser = require('../src/html');
             run: [{ color: 'red', font: 'sans-serif', align: 'left', text: 'hi' }],
             result: '<span style="color: red; font-family: sans-serif; text-align: left;">hi</span>',
         },
+        { 
+            run: [{ font: 'sans-serif', align: 'right', text: 'hi\nfrom\nCarota\n!!!!\n\n\n' }],
+            result: '<span style="font-family: sans-serif; text-align: right;">hi<br/>from<br/>Carota<br/>!!!!<br/><br/><br/></span>',
+        },
     ].forEach(( data, i ) => {
         test('html function should parse carota format to html  '+ i, () => {
             expect( htmlParser.html( data.run )).toEqual( data.result );
