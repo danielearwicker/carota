@@ -423,8 +423,8 @@ var prototype = node.derive({
             return;
         }
         this.selection.start = Math.max(0, ordinal);
-        this.selection.end = Math.max(
-            typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
+        this.selection.end = Math.min(
+            typeof ordinalEnd === 'number' ? ordinalEnd : this.frame.length - 1,
             this.frame.length - 1
         );
         this.selectionJustChanged = true;

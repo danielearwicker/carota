@@ -65,6 +65,22 @@ test('select function should take end of text if end index is not specified', ()
             script: 'normal',
         },
     ]);
+
+    document.select( 3, 2 );
+    expect( document.selectedRange().save()).toEqual([
+        {
+            text: 't',
+            size: 10,
+            font: 'lt_regular',
+            color: 'red',
+            bold: true,
+            italic: false,
+            underline: false,
+            strikeout: true,
+            align: 'left',
+            script: 'normal',
+        },
+    ]);
 });
 
 
