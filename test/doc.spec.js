@@ -48,3 +48,23 @@ test('save function should return the selected content with default styles appli
         },
     ]);
 });
+
+test('select function should take end of text if end index is not specified', () => {
+    document.select( 3 );
+    expect( document.selectedRange().save()).toEqual([
+        {
+            text: 'here',
+            size: 10,
+            font: 'lt_regular',
+            color: 'red',
+            bold: true,
+            italic: false,
+            underline: false,
+            strikeout: true,
+            align: 'left',
+            script: 'normal',
+        },
+    ]);
+});
+
+
