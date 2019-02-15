@@ -423,7 +423,7 @@ var prototype = node.derive({
             return;
         }
         this.selection.start = Math.max(0, ordinal);
-        this.selection.end = Math.max(
+        this.selection.end = Math.min(
             typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
             this.frame.length - 1
         );
@@ -437,6 +437,9 @@ var prototype = node.derive({
             altering the formatting)
         */
         this.notifySelectionChanged(takeFocus);
+    },
+    selectFrom: function( start, takeFocus ){
+        this.select( start, this.frame.length - 1, takeFocus );
     },
     selectAll: function(){
         this.select( 0, this.frame.length - 1, true );
