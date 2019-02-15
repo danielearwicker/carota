@@ -50,7 +50,7 @@ test('save function should return the selected content with default styles appli
 });
 
 test('select function should take end of text if second param is `end` ', () => {
-    document.select( 3, 'end' );
+    document.selectFrom( 3 );
     expect( document.selectedRange().save()).toEqual([
         {
             text: 'here',
@@ -65,8 +65,6 @@ test('select function should take end of text if second param is `end` ', () => 
             script: 'normal',
         },
     ]);
-    document.select( 2 );
-    expect( document.selectedRange().save()).toEqual([]);
 
 });
 

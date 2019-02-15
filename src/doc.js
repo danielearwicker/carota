@@ -422,9 +422,6 @@ var prototype = node.derive({
             // Something has gone terribly wrong - doc.transaction will rollback soon
             return;
         }
-        if ( ordinalEnd === 'end' ) {
-            ordinalEnd = this.frame.length - 1;
-        }
         this.selection.start = Math.max(0, ordinal);
         this.selection.end = Math.min(
             typeof ordinalEnd === 'number' ? ordinalEnd : this.selection.start,
@@ -440,6 +437,9 @@ var prototype = node.derive({
             altering the formatting)
         */
         this.notifySelectionChanged(takeFocus);
+    },
+    selectFrom: function( start, takeFocus ){
+        this.select( start, this.frame.length - 1, takeFocus );
     },
     selectAll: function(){
         this.select( 0, this.frame.length - 1, true );
