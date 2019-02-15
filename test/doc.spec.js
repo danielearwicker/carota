@@ -49,8 +49,8 @@ test('save function should return the selected content with default styles appli
     ]);
 });
 
-test('select function should take end of text if end index is not specified', () => {
-    document.select( 3 );
+test('select function should take end of text if second param is `end` ', () => {
+    document.select( 3, 'end' );
     expect( document.selectedRange().save()).toEqual([
         {
             text: 'here',
@@ -65,22 +65,10 @@ test('select function should take end of text if end index is not specified', ()
             script: 'normal',
         },
     ]);
+    document.select( 2 );
+    expect( document.selectedRange().save()).toEqual([]);
 
-    document.select( 3, 2 );
-    expect( document.selectedRange().save()).toEqual([
-        {
-            text: 't',
-            size: 10,
-            font: 'lt_regular',
-            color: 'red',
-            bold: true,
-            italic: false,
-            underline: false,
-            strikeout: true,
-            align: 'left',
-            script: 'normal',
-        },
-    ]);
 });
+
 
 
