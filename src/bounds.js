@@ -1,6 +1,6 @@
 var doc = require('./doc');
 
-exports = module.exports = function( styles ) {
+exports = module.exports = function( data, width, styles ) {
     var canvas = document.createElement( 'canvas' );
     var carota = doc( styles );
     carota.load( data );
