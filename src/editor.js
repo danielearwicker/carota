@@ -442,11 +442,13 @@ exports.create = function(element, defaultFormatting) {
         }
     });
 
-    registerMouseEvent('mouseup', function(node) {
-        selectDragStart = null;
-        keyboardX = null;
-        updateTextArea();
-        textArea.focus();
+    document.addEventListener( 'mouseup', function(){
+        if ( selectDragStart !== null ) {
+            selectDragStart = null;
+            keyboardX = null;
+            updateTextArea();
+            textArea.focus();
+        }
     });
 
     var nextCaretToggle = new Date().getTime(),
