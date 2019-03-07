@@ -279,7 +279,7 @@ exports.create = function(element, defaultFormatting) {
     };
 
     dom.handleEvent(textArea, 'keydown', function(ev) {
-        if (handleKey(ev.keyCode, ev.shiftKey, ev.ctrlKey)) {
+        if (handleKey(ev.keyCode, ev.shiftKey, ev.ctrlKey || ev.metaKey )) {
             return false;
         }
         // console.log(ev.which);
