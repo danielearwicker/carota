@@ -79,7 +79,7 @@ var measureText = exports.measureText = function(text, style) {
     div.style.position = 'absolute';
     div.style.top = '0';
     div.style.left = '0';
-    div.style.width = '500px';
+    div.style.width = '2000px';
     div.style.height = '200px';
 
     div.appendChild(span);
