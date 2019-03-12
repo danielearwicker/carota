@@ -74,7 +74,9 @@ var prototype = node.derive({
                 }
             }
         } else {
-            runs = value;
+            runs = value.map(function (run) {
+                return Object.assign({}, run);
+            });
         }
 
         var self = this;
