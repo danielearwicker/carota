@@ -446,6 +446,10 @@ var prototype = node.derive({
     selectAll: function(){
         this.select( 0, this.frame.length - 1, true );
     },
+    moveCaretToPoint: function( point ){
+        var node = this.byCoordinate( point.x, point.y );
+        this.select( node.ordinal, node.ordinal, true );
+    },
     moveCaretToEnd: function(){
         this.select( this.frame.length - 1, this.frame.length - 1, true );
     },
