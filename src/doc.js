@@ -112,6 +112,52 @@ var prototype = node.derive({
     documentRange: function() {
         return this.range(0, this.frame.length - 1);
     },
+
+    isMultiLine: function() {
+        return this.frame.lines.length > 1;
+    },
+    isCaretAtEnd: function() {
+        return this.documentRange().end === this.selection.end;
+    },
+    isCaretAtStart: function() {
+        return this.documentRange().start === this.selection.end;
+    },
+    isCaretAtLastLine: function() {
+        var endCaret = this.getCaretCoords( this.documentRange().end );
+        var currentCaret = this.getCurrentCaret();
+        return endCaret.t === currentCaret.t;
+    },
+    isCaretAtFirstLine: function() {
+        var startCaret = this.getCaretCoords( this.documentRange().start );
+        var currentCaret = this.getCurrentCaret();
+        return startCaret.t === currentCaret.t;
+    },
+    getCurrentCaret: function() {
+        return this.getCaretCoords( this.selection.end );
+    },
+
+    getSelectionBounds: function() {
+        if ( this.selection.end === this.selection.start ) {
+            return;
+        }
+        var startCaret = this.getCaretCoords( this.selection.start );
+        var endCaret = this.getCaretCoords( this.selection.end );
+        if ( startCaret.t === endCaret.t ) {
+            return {
+                x: startCaret.l,
+                y: startCaret.t,
+                width: endCaret.l - startCaret.l,
+            }
+        } else {
+            return {
+                x: 0,
+                y: startCaret.t,
+                width: this.frame._bounds.w,
+            }
+        }
+        // TODO - Find height
+    },
+
     selectedRange: function() {
         return this.range(this.selection.start, this.selection.end);
     },
