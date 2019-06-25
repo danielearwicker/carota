@@ -17,7 +17,7 @@ setInterval(function() {
     }
 }, 200);
 
-exports.create = function(element, defaultFormatting) {
+exports.create = function(element, defaultFormatting, drawtext = true ) {
 
     // We need the host element to be a container:
     if (dom.effectiveStyle(element, 'position') !== 'absolute') {
@@ -342,8 +342,9 @@ exports.create = function(element, defaultFormatting) {
 
         ctx.clearRect(0, 0, logicalWidth, logicalHeight);
         ctx.translate(0, getVerticalOffset() - element.scrollTop);
-        
-        doc.draw(ctx, rect(0, element.scrollTop, logicalWidth, logicalHeight));
+        if ( drawtext ) {
+            doc.draw(ctx, rect(0, element.scrollTop, logicalWidth, logicalHeight));
+        }        
         doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
 
