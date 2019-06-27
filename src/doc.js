@@ -314,7 +314,10 @@ var prototype = node.derive({
         if ( this.words.length > 1 ) {
             var last = this.words[ this.words.length - 1 ];
             if ( last.text.plainText === '\n' && !last.text.parts[0].run.align ) {
-                last.text.parts[0].run.align = this.words[ this.words.length - 2 ].text.parts[0].run.align;
+                var prevTextpart =  this.words[ this.words.length - 2 ].text.parts[0];
+                if ( prevTextpart && prevTextpart.run && prevTextpart.run.align ) {
+                    last.text.parts[0].run.align = prevTextpart.run.align;
+                }                
             }
         }
 
