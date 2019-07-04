@@ -112,7 +112,62 @@ var prototype = node.derive({
     documentRange: function() {
         return this.range(0, this.frame.length - 1);
     },
+    getDrawableContent: function() {
+        var words = [];
+        var underLines = [];        
+        var strikLines = [];        
+        for (let i = 0; i < this.frame.lines.length; i++) {
+            var line = this.frame.lines[i];
+            if ( line.positionedWords ) {
+                for (let j = 0; j < line.positionedWords.length; j++) {
+                    var left = line.positionedWords[j].left;
+                    var word = line.positionedWords[j].word;
+                    var text = word.text.parts[0];
 
+                    if ( text.run.underline === true ) {
+                        underLines.push({
+                            baseline: line.baseline,
+                            width: word.width, // text width + space width,
+                            left,
+                            color: text.run.color || this.defaultFormatting.color,
+                        })
+                    }
+
+                    if ( text.run.strikeout === true ) {
+                        strikLines.push({
+                            ascent: word.ascent,
+                            baseline: line.baseline,
+                            width: word.width, // text width + space width,
+                            left,
+                            color: text.run.color || this.defaultFormatting.color,
+                        })
+                    }
+
+                    if ( !text.run.text || text.run.text.trim() === '' ) {
+                        continue;
+                    }
+                    words.push({
+                        baseline: line.baseline,
+                        left,
+                        content: {
+                            text: text.run.text,
+                            size: text.run.size || this.defaultFormatting.size,
+                            font: text.run.font || this.defaultFormatting.font,
+                            color: text.run.color || this.defaultFormatting.color,
+                            bold: text.run.bold || this.defaultFormatting.bold,
+                            italic: text.run.italic || this.defaultFormatting.italic,
+                            underline: text.run.underline || this.defaultFormatting.underline,
+                            strikeout: text.run.strikeout || this.defaultFormatting.strikeout,
+                            align: text.run.align || this.defaultFormatting.align,
+                            script: text.run.script || this.defaultFormatting.script,
+                        }
+                    })
+                }
+            }
+            
+        }
+        return { words, underLines, strikLines };
+    },
     isMultiLine: function() {
         return this.frame.lines.length > 1;
     },
