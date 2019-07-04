@@ -147,7 +147,7 @@ var prototype = node.derive({
                         baseline: line.baseline,
                         left,
                         content: {
-                            text: text.run.text.trim() + '&nbsp;'.repeat( word.space.length ),
+                            text: text.run.text.trim() + '&#160;'.repeat( word.space.length ),
                             size: text.run.size || this.defaultFormatting.size,
                             font: text.run.font || this.defaultFormatting.font,
                             color: text.run.color || this.defaultFormatting.color,
