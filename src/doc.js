@@ -122,8 +122,11 @@ var prototype = node.derive({
                 for (let j = 0; j < line.positionedWords.length; j++) {
                     var left = line.positionedWords[j].left;
                     var word = line.positionedWords[j].word;
-                    var text = word.text.parts[0];
 
+                    if ( !word.text.parts || !word.text.parts.length || !word.text.parts[0] ) {
+                        continue;
+                    }
+                    var text = word.text.parts[0];
                     if ( text.run.underline === true ) {
                         underLines.push({
                             baseline: line.baseline,
