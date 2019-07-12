@@ -495,5 +495,6 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
     doc.canvas = canvas;
     doc.textArea = textArea;
     doc.setZoomLevel = function( level ){ currentZoomLevel = level };
+    doc.getZoomLevel = function(){ return currentZoomLevel };
     return doc;
 };
