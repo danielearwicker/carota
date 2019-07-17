@@ -10,6 +10,7 @@ var util = require('./util');
 var frame = require('./frame');
 var codes = require('./codes');
 var rect = require('./rect');
+var he = require('he')
 
 var makeEditCommand = function(doc, start, count, words) {
     var selStart = doc.selection.start, selEnd = doc.selection.end;
@@ -150,7 +151,7 @@ var prototype = node.derive({
                         baseline: line.baseline,
                         left,
                         content: {
-                            text: encodeHTML( text.run.text.trim()) + '&#160;'.repeat( word.space.length ),
+                            text: he.encode( text.run.text.trim()) + '&#160;'.repeat( word.space.length ),
                             size: text.run.size || this.defaultFormatting.size,
                             font: text.run.font || this.defaultFormatting.font,
                             color: text.run.color || this.defaultFormatting.color,
@@ -601,23 +602,6 @@ var prototype = node.derive({
     },
     type: 'document'
 });
-
-// This generic function encodes every non alphabetic character to its htmlcode (numeric):
-// https://stackoverflow.com/questions/784586/convert-special-characters-to-html-in-javascript
-var encodeHTML = function(str) {
-    var i = str.length,
-        aRet = [];
-
-    while (i--) {
-        var iC = str[i].charCodeAt();
-        if (iC < 65 || iC > 127 || (iC>90 && iC<97)) {
-            aRet[i] = '&#'+iC+';';
-        } else {
-            aRet[i] = str[i];
-        }
-    }
-    return aRet.join('');
-}
 
 exports = module.exports = function( defaultFormatting ) {
     var doc = Object.create(prototype);
