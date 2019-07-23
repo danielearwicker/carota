@@ -452,6 +452,12 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
         }
     });
 
+    canvas.addEventListener('click', function (evt) {
+        if (evt.detail === 3) {
+            doc.selectAll();
+        }
+    });
+
     var nextCaretToggle = new Date().getTime(),
         focused = false,
         cachedWidth = element.clientWidth,
