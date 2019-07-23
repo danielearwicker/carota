@@ -156,6 +156,6 @@ exports.draw = function(ctx, str, formatting, left, baseline, width, ascent, des
         ctx.fillRect(left, 1 + baseline, width, 1);
     }
     if (formatting.strikeout) {
-        ctx.fillRect(left, 1 + baseline - (ascent/2), width, 1);
+        ctx.fillRect(left, 1 + baseline - (ascent * 0.4), width, 1);
     }
 };
