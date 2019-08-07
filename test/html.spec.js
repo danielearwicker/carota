@@ -14,6 +14,50 @@ var htmlParser = require('../src/html');
 
     [
         { 
+            html: '<span style="color:red"></span>',
+            result: [{
+                text: '',
+                size: 10,
+                font: 'lt_regular',
+                color: 'red',
+                bold: true,
+                italic: false,
+                underline: false,
+                strikeout: false,
+                align: 'left',
+                script: 'normal',
+            }],
+        },
+        { 
+            html: '<span style="color:blue; font-size:13pt" ></span><span style="color:red"></span>',
+            result: [
+                {
+                    text: '',
+                    size: 13,
+                    font: 'lt_regular',
+                    color: 'blue',
+                    bold: true,
+                    italic: false,
+                    underline: false,
+                    strikeout: false,
+                    align: 'left',
+                    script: 'normal',
+                },
+                {
+                    text: '',
+                    size: 10,
+                    font: 'lt_regular',
+                    color: 'red',
+                    bold: true,
+                    italic: false,
+                    underline: false,
+                    strikeout: false,
+                    align: 'left',
+                    script: 'normal',
+                }
+            ],
+        },
+        { 
             html: '<span style="color:red">hi</span>',
             result: [{
                 text: 'hi',

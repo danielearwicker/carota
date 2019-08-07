@@ -182,6 +182,9 @@ exports.parse = function(html, defaultFormatting, classes) {
                 for (var n = 0; n < node.childNodes.length; n++) {
                     recurse(node.childNodes[n], formatting);
                 }
+                if ( node.childNodes.length === 0 ) { // Empty text <span ></span>
+                    emit('', formatting);
+                }
             }
             if (isNewLine[node.nodeName]) {
                 emit('\n', formatting);
