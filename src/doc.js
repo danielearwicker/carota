@@ -127,49 +127,84 @@ var prototype = node.derive({
                     if ( !word.text.parts || !word.text.parts.length || !word.text.parts[0] ) {
                         continue;
                     }
-                    var text = word.text.parts[0];
-                    if ( text.run.underline === true ) {
-                        underLines.push({
-                            baseline: line.baseline,
-                            width: word.width, // text width + space width,
-                            left,
-                            color: text.run.color || this.defaultFormatting.color,
-                        })
-                    }
 
-                    if ( text.run.strikeout === true ) {
-                        strikLines.push({
-                            ascent: word.ascent,
-                            baseline: line.baseline,
-                            width: word.width, // text width + space width,
-                            left,
-                            color: text.run.color || this.defaultFormatting.color,
-                        })
-                    }
-
-                    words.push({
-                        baseline: line.baseline,
-                        left,
-                        content: {
-                            text: he.encode( text.run.text.trim()) + '&#160;'.repeat( word.space.length ),
-                            size: text.run.size || this.defaultFormatting.size,
-                            font: text.run.font || this.defaultFormatting.font,
-                            color: text.run.color || this.defaultFormatting.color,
-                            bold: text.run.bold || this.defaultFormatting.bold,
-                            italic: text.run.italic || this.defaultFormatting.italic,
-                            underline: text.run.underline || this.defaultFormatting.underline,
-                            strikeout: text.run.strikeout || this.defaultFormatting.strikeout,
-                            align: text.run.align || this.defaultFormatting.align,
-                            script: text.run.script || this.defaultFormatting.script,
+                    for (let k = 0; k < word.text.parts.length; k++) {
+                        var text = word.text.parts[k];
+                        if ( text.run.underline === true ) {
+                            underLines.push({
+                                baseline: line.baseline,
+                                width: word.width, // text width + space width,
+                                left,
+                                color: text.run.color || this.defaultFormatting.color,
+                            })
                         }
-                    })
+    
+                        if ( text.run.strikeout === true ) {
+                            strikLines.push({
+                                ascent: word.ascent,
+                                baseline: line.baseline,
+                                width: word.width, // text width + space width,
+                                left,
+                                color: text.run.color || this.defaultFormatting.color,
+                            })
+                        }
+    
+                        words.push({
+                            baseline: line.baseline,
+                            left,
+                            content: {
+                                text: he.encode( text.run.text.trim()) + '&#160;'.repeat( word.space.length ),
+                                size: text.run.size || this.defaultFormatting.size,
+                                font: text.run.font || this.defaultFormatting.font,
+                                color: text.run.color || this.defaultFormatting.color,
+                                bold: text.run.bold || this.defaultFormatting.bold,
+                                italic: text.run.italic || this.defaultFormatting.italic,
+                                underline: text.run.underline || this.defaultFormatting.underline,
+                                strikeout: text.run.strikeout || this.defaultFormatting.strikeout,
+                                align: text.run.align || this.defaultFormatting.align,
+                                script: text.run.script || this.defaultFormatting.script,
+                            }
+                        })
+                        left = left + text.width;
+                    }
                 }
             }
             
         }
         return { words, underLines, strikLines };
     },
-    
+    getLinksData: function() {
+        var links = [];        
+        for (let i = 0; i < this.frame.lines.length; i++) {
+            var line = this.frame.lines[i];
+            if ( line.positionedWords ) {
+                for (let j = 0; j < line.positionedWords.length; j++) {
+                    var left = line.positionedWords[j].left;
+                    var word = line.positionedWords[j].word;
+
+                    if ( !word.text.parts || !word.text.parts.length || !word.text.parts[0] ) {
+                        continue;
+                    }
+                    var text = word.text.parts[0];
+                    for (let k = 0; k < word.text.parts.length; k++) {
+                        var text = word.text.parts[k];
+                        if ( text.run.link ) {
+                            links.push({
+                                value: text.run.link,
+                                text: text.run.text,
+                                x: left,
+                                y: line.baseline - text.ascent,
+                                width: text.width,
+                                height: text.ascent + text.descent,
+                            });
+                        }
+                        left = left + text.width;    
+                    }
+                }
+            }
+        }
+        return links;
+    },    
     isMultiLine: function() {
         return this.frame.lines.length > 1;
     },
@@ -551,6 +586,47 @@ var prototype = node.derive({
     },
     selectAll: function(){
         this.select( 0, this.frame.length - 1, true );
+    },
+
+    /**
+     * Returns a range, to left and right, relative to the current caret position,
+     * where each value of specified properties are uniform.
+     * @param styles string array that specifies the properties to check
+     */
+    selectByProperties: function( styles ){
+        const currentCaret = this.selection.start;
+        const currentFormat = this.selectedRange().getFormatting();
+        const middleFormat = {};
+        styles.map( key => {
+            middleFormat[ key ] = currentFormat[ key ];
+        });        
+
+        let left = 0;
+        if ( currentCaret > 0 ) {
+            let leftFormat;
+            while ( currentCaret - left >= 0 ) {
+                left++;
+                leftFormat = this.range( currentCaret - left, currentCaret ).getFormatting();   
+                if ( !Object.keys( middleFormat ).every( key => middleFormat[ key ] === leftFormat[ key ])) {
+                    left--;
+                    break;
+                }
+            }
+        }
+
+        let right = 0;
+        if ( currentCaret < this.frame.length - 1 ) {
+            let rightFormat;
+            while ( currentCaret + right <= this.frame.length ) {
+                right++;
+                rightFormat = this.range( currentCaret, currentCaret + right ).getFormatting();
+                if ( !Object.keys( middleFormat ).every( key => middleFormat[ key ] === rightFormat[ key ])) {
+                    right--;
+                    break;
+                }
+            }
+        }
+        return this.range( currentCaret - left, currentCaret + right );
     },
     moveCaretToPoint: function( point ){
         var node = this.byCoordinate( point.x, point.y );
