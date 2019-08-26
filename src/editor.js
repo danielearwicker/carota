@@ -502,5 +502,6 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
     doc.textArea = textArea;
     doc.setZoomLevel = function( level ){ currentZoomLevel = level };
     doc.getZoomLevel = function(){ return currentZoomLevel };
+    doc.focus = function(){ textArea.focus() };
     return doc;
 };

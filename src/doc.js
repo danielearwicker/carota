@@ -229,25 +229,31 @@ var prototype = node.derive({
     },
 
     getSelectionBounds: function() {
-        if ( this.selection.end === this.selection.start ) {
-            return;
-        }
         var startCaret = this.getCaretCoords( this.selection.start );
+        if ( this.selection.end === this.selection.start ) {
+            return {
+                x: startCaret.l,
+                y: startCaret.t,
+                width: 0,
+                height: startCaret.h,
+            };
+        }
         var endCaret = this.getCaretCoords( this.selection.end );
         if ( startCaret.t === endCaret.t ) {
             return {
                 x: startCaret.l,
                 y: startCaret.t,
                 width: endCaret.l - startCaret.l,
+                height: endCaret.b - startCaret.t,
             }
         } else {
             return {
                 x: 0,
                 y: startCaret.t,
                 width: this.frame._bounds.w,
+                height: endCaret.b - startCaret.t,
             }
         }
-        // TODO - Find height
     },
 
     selectedRange: function() {
@@ -601,32 +607,30 @@ var prototype = node.derive({
             middleFormat[ key ] = currentFormat[ key ];
         });        
 
-        let left = 0;
+        let left = 1;
         if ( currentCaret > 0 ) {
             let leftFormat;
             while ( currentCaret - left >= 0 ) {
-                left++;
                 leftFormat = this.range( currentCaret - left, currentCaret ).getFormatting();   
                 if ( !Object.keys( middleFormat ).every( key => middleFormat[ key ] === leftFormat[ key ])) {
-                    left--;
                     break;
                 }
+                left++;
             }
         }
 
-        let right = 0;
-        if ( currentCaret < this.frame.length - 1 ) {
+        let right = 1;
+        if ( currentCaret < this.frame.length ) {
             let rightFormat;
-            while ( currentCaret + right <= this.frame.length ) {
-                right++;
+            while ( currentCaret + right <= this.frame.length - 1 ) {
                 rightFormat = this.range( currentCaret, currentCaret + right ).getFormatting();
                 if ( !Object.keys( middleFormat ).every( key => middleFormat[ key ] === rightFormat[ key ])) {
-                    right--;
                     break;
                 }
+                right++;
             }
         }
-        return this.range( currentCaret - left, currentCaret + right );
+        return this.range( currentCaret - left + 1, currentCaret + right - 1 );
     },
     moveCaretToPoint: function( point ){
         var node = this.byCoordinate( point.x, point.y );
