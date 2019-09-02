@@ -163,6 +163,7 @@ var prototype = node.derive({
                                 strikeout: text.run.strikeout || this.defaultFormatting.strikeout,
                                 align: text.run.align || this.defaultFormatting.align,
                                 script: text.run.script || this.defaultFormatting.script,
+                                link: text.run.link,
                             }
                         })
                         left = left + text.width;
