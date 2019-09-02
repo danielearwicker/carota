@@ -10,7 +10,8 @@ var util = require('./util');
 var frame = require('./frame');
 var codes = require('./codes');
 var rect = require('./rect');
-var he = require('he')
+var he = require('he');
+var isUrlValid = require('url-validation');
 
 var makeEditCommand = function(doc, start, count, words) {
     var selStart = doc.selection.start, selEnd = doc.selection.end;
@@ -633,6 +634,88 @@ var prototype = node.derive({
         }
         return this.range( currentCaret - left + 1, currentCaret + right - 1 );
     },
+
+    autoLink: function () {
+        var links =this.words.filter( w => isUrlValid( w.text.plainText ));
+        links.forEach( link =>  {
+            link.text.parts[0].run.link = link.text.plainText;
+            link.text.parts[0].run.color =  'rgb(94, 156, 211)';
+            link.text.parts[0].run.underline = true;
+        });
+        this.notifySelectionChanged( true );
+    },
+    /**
+     * This method is to be run immediately after enter or space key is subjected to `keyup` event.
+     * This method will check if the previous word is a link and sets the link and link styles.
+     */
+    autolinkOnKeyup: function() {
+        var currentCaret = this.selection.start;
+        var wordRange = this.getLeftWordRange( currentCaret - 1 ); // -1 to skip the space or enter
+        var word = wordRange.plainText();
+        if ( !isUrlValid( word )){
+            return;
+        }
+        wordRange.setFormatting( 'link', word.trim(), true );
+        wordRange.setFormatting( 'color', 'rgb(94, 156, 211)', true );
+        wordRange.setFormatting( 'underline', true, true );
+
+        var spaceRange = this.range( currentCaret - 1, currentCaret );
+        var prevFormat = this.getPreviousFormat([ 'link' ], currentCaret - 1 );
+        spaceRange.setFormatting( 'link', undefined, true );
+        spaceRange.setFormatting( 'color', prevFormat.color, true );
+        spaceRange.setFormatting( 'underline', prevFormat.underline, true );
+    },
+
+    /**
+     * This method returns the range of the word that is at the left side to the
+     * `current` position
+     */
+    getLeftWordRange: function( current ) {
+        let left = 1;
+        if ( current > 0 ) {
+            while ( current - left >= 0 ) {
+                var text = this.range( current - left, current ).getFormatting().text;
+                if ( !text || text === ' ' ) {
+                    break;
+                }
+                left++;
+            }
+        }
+        return this.range( current - left + 1, current );
+    },
+
+    /**
+     * Returns the format of the previous text to the text that
+     * the caret is on.
+     * @param styles The styles to consider the difference
+     * @param current The position of the caret
+    */
+    getPreviousFormat: function( styles, current ) {
+        var currentFormat = this.range( current, current ).getFormatting();
+        var middleFormat = {};
+        styles.map( key => {
+            middleFormat[ key ] = currentFormat[ key ];
+        });        
+
+        let left = 1;
+        if ( current > 0 ) {
+            let leftFormat;
+            while ( current - left >= 0 ) {
+                leftFormat = this.range( current - left, current ).getFormatting();
+                if ( !Object.keys( middleFormat ).every( key => middleFormat[ key ] === leftFormat[ key ])) {
+                    break;
+                }
+                left++;
+            }
+        }
+        var rigth = current - left + 1;
+        if ( left < 0 ) {
+            return this.defaultFormatting;
+        } else {
+            return this.range( rigth - 1, rigth ).getFormatting();
+        }
+    },
+
     moveCaretToPoint: function( point ){
         var node = this.byCoordinate( point.x, point.y );
         this.select( node.ordinal, node.ordinal, true );

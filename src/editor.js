@@ -359,6 +359,12 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
                 newText = richClipboard;
             }
             doc.insert(newText);
+            if ( newText === ' ' || newText === '\n' ) {
+                doc.autolinkOnKeyup();
+            }
+            if ( newText.length >= 'http://x.xx'.length ) {
+                doc.autoLink();
+            }
         }
     });
 
