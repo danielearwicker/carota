@@ -655,7 +655,11 @@ var prototype = node.derive({
         if ( this.selection.start !== this.selection.end && this.frame.length < 1 ) {
             return false
         }
-        if ( this.selection.start == 0 && this.range( 0, 0 ).getFormatting().link ) {
+        if ( this.selection.start === 0 && this.range( 0, 0 ).getFormatting().link ) {
+            return true;
+        }
+        var last = this.frame.length - 1;
+        if ( this.selection.start === last && this.range( last, last ).getFormatting().link ) {
             return true;
         }
         var caret = this.selection.start;
