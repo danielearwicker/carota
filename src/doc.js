@@ -635,6 +635,38 @@ var prototype = node.derive({
         return this.range( currentCaret - left + 1, currentCaret + right - 1 );
     },
 
+    /**
+     * This function applies the previouse value to the newly entered char.
+     * replacing the link and link related styles
+     */
+    breakHyperlink: function () {
+        var currentCaret = this.selection.start;
+        var newCharRange = this.range( currentCaret - 1, currentCaret );
+        var prevFormat = this.getPreviousFormat([ 'link' ], currentCaret - 1 );
+        newCharRange.setFormatting( 'link', undefined, true );
+        newCharRange.setFormatting( 'color', prevFormat.color, true );
+        newCharRange.setFormatting( 'underline', prevFormat.underline, true );
+    },
+
+    /**
+     * This function returns true if the caret is at the begining or end of a link
+     */
+    isCaretAtHyperlinkEdge: function () {
+        if ( this.selection.start !== this.selection.end && this.frame.length < 1 ) {
+            return false
+        }
+        if ( this.selection.start == 0 && this.range( 0, 0 ).getFormatting().link ) {
+            return true;
+        }
+        var caret = this.selection.start;
+        var leftFormat = this.range( caret, caret ).getFormatting();
+        var rightFormat = this.range( caret, caret + 1 ).getFormatting();
+        if ( leftFormat.link !== rightFormat.link ) {
+            return true;
+        }
+        return false;
+    },
+
     autoLink: function () {
         var links =this.words.filter( w => isUrlValid( w.text.plainText ));
         links.forEach( link =>  {
