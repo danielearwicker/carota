@@ -358,12 +358,16 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
             if (newText === plainClipboard) {
                 newText = richClipboard;
             }
+            var isCaretAtLinkEdge =  doc.isCaretAtHyperlinkEdge();
             doc.insert(newText);
             if ( newText === ' ' || newText === '\n' ) {
                 doc.autolinkOnKeyup();
             }
             if ( newText.length >= 'http://x.xx'.length ) {
                 doc.autoLink();
+            }
+            if ( isCaretAtLinkEdge ) {
+                doc.breakHyperlink();
             }
         }
     });
