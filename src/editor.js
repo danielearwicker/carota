@@ -352,7 +352,7 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
 
     dom.handleEvent(textArea, 'input', function() {
         var newText = textArea.value;
-        if (textAreaContent != newText) {
+        if (!isShapeJSON(newText) && textAreaContent != newText) {
             textAreaContent = '';
             textArea.value = '';
             if (newText === plainClipboard) {
@@ -371,6 +371,19 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
             }
         }
     });
+
+    var isShapeJSON = function( text ) {
+        try {
+            var obj = JSON.parse( text );
+            if( obj[0] && obj[0].data && obj[0].data.defId ) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch( error ) {
+            return false;
+        }
+    }
 
     var updateTextArea = function() {
         focusChar = focusChar === null ? doc.selection.end : focusChar;
