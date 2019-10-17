@@ -345,17 +345,19 @@ var prototype = node.derive({
     runs: function(emit, range) {
         var startDetails = this.wordContainingOrdinal(Math.max(0, range.start)),
             endDetails = this.wordContainingOrdinal(Math.min(range.end, this.frame.length - 1));
-        if (startDetails.index === endDetails.index) {
-            startDetails.word.runs(emit, {
-                start: startDetails.offset,
-                end: endDetails.offset
-            });
-        } else {
-            startDetails.word.runs(emit, { start: startDetails.offset });
-            for (var n = startDetails.index + 1; n < endDetails.index; n++) {
-                this.words[n].runs(emit);
+        if (startDetails && endDetails) {
+            if (startDetails.index === endDetails.index) {
+                startDetails.word.runs(emit, {
+                    start: startDetails.offset,
+                    end: endDetails.offset
+                });
+            } else {
+                startDetails.word.runs(emit, { start: startDetails.offset });
+                for (var n = startDetails.index + 1; n < endDetails.index; n++) {
+                    this.words[n].runs(emit);
+                }
+                endDetails.word.runs(emit, { end: endDetails.offset });
             }
-            endDetails.word.runs(emit, { end: endDetails.offset });
         }
     },
     spliceWordsWithRuns: function(wordIndex, count, runs, takeFocus) {
@@ -439,38 +441,44 @@ var prototype = node.derive({
             endWord = this.wordContainingOrdinal(end);
 
         var prefix;
-        if (start === startWord.ordinal) {
-            if (startWord.index > 0 && !isBreaker(this.words[startWord.index - 1])) {
-                startWord.index--;
-                var previousWord = this.words[startWord.index];
-                prefix = per({}).per(previousWord.runs, previousWord).all();
+        if(startWord) {
+            if (start === startWord.ordinal) {
+                if (startWord.index > 0 && !isBreaker(this.words[startWord.index - 1])) {
+                    startWord.index--;
+                    var previousWord = this.words[startWord.index];
+                    prefix = per({}).per(previousWord.runs, previousWord).all();
+                } else {
+                    prefix = [];
+                }
             } else {
-                prefix = [];
+                prefix = per({ end: startWord.offset })
+                        .per(startWord.word.runs, startWord.word)
+                        .all();
             }
-        } else {
-            prefix = per({ end: startWord.offset })
-                    .per(startWord.word.runs, startWord.word)
-                    .all();
         }
 
         var suffix;
-        if (end === endWord.ordinal) {
-            if ((end === this.frame.length - 1) || isBreaker(endWord.word)) {
-                suffix = [];
-                endWord.index--;
+        if(endWord) {
+            if (end === endWord.ordinal) {
+                if ((end === this.frame.length - 1) || isBreaker(endWord.word)) {
+                    suffix = [];
+                    endWord.index--;
+                } else {
+                    suffix = per({}).per(endWord.word.runs, endWord.word).all();
+                }
             } else {
-                suffix = per({}).per(endWord.word.runs, endWord.word).all();
+                suffix = per({ start: endWord.offset })
+                        .per(endWord.word.runs, endWord.word)
+                        .all();
             }
-        } else {
-            suffix = per({ start: endWord.offset })
-                    .per(endWord.word.runs, endWord.word)
-                    .all();
         }
 
         var oldLength = this.frame.length;
 
-        this.spliceWordsWithRuns(startWord.index, (endWord.index - startWord.index) + 1,
-            per(prefix).concat(text).concat(suffix).per(runs.consolidate( this.defaultFormatting )).all(), takeFocus);
+        if(startWord && endWord) {
+            this.spliceWordsWithRuns(startWord.index, (endWord.index - startWord.index) + 1,
+                per(prefix).concat(text).concat(suffix).per(runs.consolidate( this.defaultFormatting )).all(), takeFocus);
+        }
 
         return this.frame ? (this.frame.length - oldLength) : 0;
     },
