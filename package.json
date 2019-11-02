@@ -17,7 +17,7 @@
   "devDependencies": {
     "webmake": ">=0.3.19",
     "node-minify": ">=0.8.1",
-    "express": "3.3.4",
+    "express": "4.17.1",
     "uglifyjs": "^2.4.10"
   },
   "license": "MIT"
