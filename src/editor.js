@@ -16,8 +16,8 @@ setInterval(function() {
         editors[n].dispatchEvent(ev);
     }
 }, 200);
-
-exports.create = function(element, defaultFormatting, drawtext = true ) {
+var editors = [];
+var create = function(element, defaultFormatting, drawtext = true ) {
 
     // We need the host element to be a container:
     if (dom.effectiveStyle(element, 'position') !== 'absolute') {
@@ -526,5 +526,11 @@ exports.create = function(element, defaultFormatting, drawtext = true ) {
     doc.setZoomLevel = function( level ){ currentZoomLevel = level };
     doc.getZoomLevel = function(){ return currentZoomLevel };
     doc.focus = function(){ textArea.focus() };
+    editors.push( doc );
     return doc;
 };
+
+module.exports = {
+    create,
+    editors
+}
