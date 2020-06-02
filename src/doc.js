@@ -88,6 +88,26 @@ var prototype = node.derive({
         this.words = per(characters(runs)).per(split(self.codes)).map(function(w) {
             return word( self.defaultFormatting, w, self.codes);
         }).all();
+
+
+        /**
+         * Carota adds a new word with a new line to mark end-of-document and it's height is not specified
+         * the height should equal to the previous line height
+         */
+        if( this.words && this.words[ this.words.length - 1 ] && this.words[ this.words.length - 2 ] ) {
+            if ( this.words[ this.words.length - 1 ].text.plainText === '\n' ) {
+                var prev = this.words[ this.words.length - 2 ];
+                var cur = this.words[ this.words.length - 1 ];
+
+                // word properties are created by cloning using Object.create() and ascent and descent 
+                // properties are readonly, so have to delete and set.
+                delete cur.ascent;
+                cur.ascent = prev.ascent;
+                delete cur.descent;
+                cur.descent = prev.descent;
+            }
+        }
+        
         this.layout();
         this.contentChanged.fire();
         this.select(0, 0, takeFocus);
