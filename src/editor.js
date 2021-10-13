@@ -46,7 +46,7 @@ exports.create = function(element) {
         textAreaContent = '',
         richClipboard = null,
         plainClipboard = null;
-    
+
     var toggles = {
         66: 'bold',
         73: 'italic',
@@ -107,7 +107,7 @@ exports.create = function(element) {
         return ordinal;
     };
 
-    var handleKey = function(key, selecting, ctrlKey) {
+    var handleKey = function(key, selecting, ctrlKey, macEmulatedCtrlKey) {
         var start = doc.selection.start,
             end = doc.selection.end,
             length = doc.frame.length - 1,
@@ -139,6 +139,8 @@ exports.create = function(element) {
         var changingCaret = false;
         switch (key) {
             case 37: // left arrow
+            case 66: // C-B
+                if (key === 66 && !macEmulatedCtrlKey) break;
                 if (!selecting && start != end) {
                     ordinal = start;
                 } else {
@@ -158,6 +160,8 @@ exports.create = function(element) {
                 changingCaret = true;
                 break;
             case 39: // right arrow
+            case 70: // C-F
+                if (key === 70 && !macEmulatedCtrlKey) break;
                 if (!selecting && start != end) {
                     ordinal = end;
                 } else {
@@ -222,10 +226,37 @@ exports.create = function(element) {
                     doc.performUndo(true);
                 }
                 break;
-            case 65: // A select all
+            case 65: // A select all, C-A beginning of line
                 if (ctrlKey) {
                     handled = true;
                     doc.select(0, length);
+                } else if (macEmulatedCtrlKey) {
+                    ordinal = endOfline(ordinal, -1);
+                    changingCaret = true;
+                }
+                break;
+            case 69: // C-E end of line
+                if (macEmulatedCtrlKey) {
+                    ordinal = endOfline(ordinal, 1);
+                    changingCaret = true;
+                }
+                break;
+            case 78: // C-N - find character below
+                if (macEmulatedCtrlKey) {
+                    ordinal = changeLine(ordinal, 1);
+                    changingCaret = true;
+                }
+                break;
+            case 80: // C-P - find character above
+                if (macEmulatedCtrlKey) {
+                    ordinal = changeLine(ordinal, -1);
+                    changingCaret = true;
+                }
+                break;
+            case 68: // C-D - delete next char
+                if (macEmulatedCtrlKey && start === end && start < length) {
+                    doc.range(start, start + 1).clear();
+                    handled = true;
                 }
                 break;
             case 67: // C - copy to clipboard
@@ -279,14 +310,15 @@ exports.create = function(element) {
     };
 
     dom.handleEvent(textArea, 'keydown', function(ev) {
-        if (handleKey(ev.keyCode, ev.shiftKey, ev.ctrlKey)) {
+        var isMacintosh =  navigator.platform.indexOf('Mac') > -1;
+        if (handleKey(ev.keyCode, ev.shiftKey, isMacintosh ? ev.metaKey : ev.ctrlKey, isMacintosh && ev.ctrlKey)) {
             return false;
         }
         console.log(ev.which);
     });
 
     var verticalAlignment = 'top';
-    
+
     doc.setVerticalAlignment = function(va) {
         verticalAlignment = va;
         paint();
@@ -294,7 +326,7 @@ exports.create = function(element) {
 
     function getVerticalOffset() {
         var docHeight = doc.frame.bounds().h;
-        if (docHeight < element.clientHeight) { 
+        if (docHeight < element.clientHeight) {
             switch (verticalAlignment) {
                 case 'middle':
                     return (element.clientHeight - docHeight) / 2;
@@ -315,15 +347,15 @@ exports.create = function(element) {
         var docHeight = doc.frame.bounds().h;
 
         var dpr = Math.max(1, window.devicePixelRatio || 1);
-        
+
         var logicalWidth = Math.max(doc.frame.actualWidth(), element.clientWidth),
             logicalHeight = element.clientHeight;
-        
+
         canvas.width = dpr * logicalWidth;
         canvas.height = dpr * logicalHeight;
         canvas.style.width = logicalWidth + 'px';
         canvas.style.height = logicalHeight + 'px';
-        
+
         canvas.style.top = element.scrollTop + 'px';
         spacer.style.width = logicalWidth + 'px';
         spacer.style.height = Math.max(docHeight, element.clientHeight) + 'px';
@@ -340,7 +372,7 @@ exports.create = function(element) {
 
         ctx.clearRect(0, 0, logicalWidth, logicalHeight);
         ctx.translate(0, getVerticalOffset() - element.scrollTop);
-        
+
         doc.draw(ctx, rect(0, element.scrollTop, logicalWidth, logicalHeight));
         doc.drawSelection(ctx, selectDragStart || (document.activeElement === textArea));
     };
